@@ -1,14 +1,15 @@
 """Deterministic Guardian domain logic. Only Python stdlib required."""
+
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import datetime, time as clock_time
-from pathlib import Path
-from random import Random, SystemRandom
 import json
 import sqlite3
-from typing import Sequence
-
+from collections.abc import Sequence
+from dataclasses import dataclass
+from datetime import datetime
+from datetime import time as clock_time
+from pathlib import Path
+from random import Random, SystemRandom
 
 MIN_INTERVAL_SECONDS = 10 * 60
 MAX_INTERVAL_SECONDS = 25 * 60
@@ -16,9 +17,13 @@ QUESTIONS_PER_QUIZ = 5
 PASS_COUNT = 4
 # Only keys reviewed or manually curated can grant a certified pass.
 # AI-generated or imported unreviewed keys are for practice only.
-CERTIFIED_QUESTION_SOURCES = frozenset({
-    "fieldnotes-reviewed", "fieldnotes+fallback-reviewed", "fallback-reviewed",
-})
+CERTIFIED_QUESTION_SOURCES = frozenset(
+    {
+        "fieldnotes-reviewed",
+        "fieldnotes+fallback-reviewed",
+        "fallback-reviewed",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -49,7 +54,7 @@ class Question:
         }
 
     @classmethod
-    def from_dict(cls, data: dict) -> "Question":
+    def from_dict(cls, data: dict) -> Question:
         if not isinstance(data, dict):
             raise ValueError("La pregunta debe ser un objeto JSON")
         options = data["options"]
@@ -77,7 +82,7 @@ def grade(questions: Sequence[Question], answers: Sequence[int]) -> tuple[int, b
         raise ValueError("El examen requiere cinco preguntas y cinco respuestas")
     if any(type(a) is not int or a not in range(4) for a in answers):
         raise ValueError("Respuesta fuera de rango")
-    correct = sum(a == q.answer_index for q, a in zip(questions, answers))
+    correct = sum(a == q.answer_index for q, a in zip(questions, answers, strict=True))
     return correct, correct >= PASS_COUNT
 
 
@@ -159,7 +164,9 @@ class ResultStore:
         )""")
         self.con.commit()
 
-    def record(self, *, topic: str, questions: Sequence[Question], answers: Sequence[int], source: str) -> tuple[int, bool]:
+    def record(
+        self, *, topic: str, questions: Sequence[Question], answers: Sequence[int], source: str
+    ) -> tuple[int, bool]:
         score, passed = grade(questions, answers)
         # Never award an unlock-eligible pass from source keys awaiting review.
         certified_pass = passed and source in CERTIFIED_QUESTION_SOURCES
@@ -168,9 +175,15 @@ class ResultStore:
                 """INSERT INTO guardian_attempts
                 (created_at, topic, question_prompts_json, answers_json, score, passed, source)
                 VALUES (?, ?, ?, ?, ?, ?, ?)""",
-                (datetime.now().astimezone().isoformat(timespec="seconds"), topic,
-                 json.dumps([q.prompt for q in questions], ensure_ascii=False),
-                 json.dumps(list(answers)), score, int(certified_pass), source),
+                (
+                    datetime.now().astimezone().isoformat(timespec="seconds"),
+                    topic,
+                    json.dumps([q.prompt for q in questions], ensure_ascii=False),
+                    json.dumps(list(answers)),
+                    score,
+                    int(certified_pass),
+                    source,
+                ),
             )
         return score, certified_pass
 

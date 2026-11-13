@@ -1,6 +1,6 @@
-from pathlib import Path
 import tempfile
 import unittest
+from pathlib import Path
 
 from guardian.core import Question, ResultStore, attempt_label
 
@@ -26,8 +26,12 @@ class PanelDataTests(unittest.TestCase):
     def test_recent_and_average(self):
         self.assertIsNone(self.store.average_score())
         self.assertEqual(self.store.recent_attempts(), [])
-        self.store.record(topic="A", questions=_questions(), answers=[0, 0, 0, 0, 1], source="fieldnotes-reviewed")
-        self.store.record(topic="B", questions=_questions(), answers=[0, 0, 0, 0, 0], source="fieldnotes-practice")
+        self.store.record(
+            topic="A", questions=_questions(), answers=[0, 0, 0, 0, 1], source="fieldnotes-reviewed"
+        )
+        self.store.record(
+            topic="B", questions=_questions(), answers=[0, 0, 0, 0, 0], source="fieldnotes-practice"
+        )
         recent = self.store.recent_attempts()
         self.assertEqual([r[1] for r in recent], ["B", "A"])  # newest first
         self.assertEqual([r[2] for r in recent], [5, 4])

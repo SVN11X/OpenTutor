@@ -5,11 +5,12 @@ keeps working while the Tk panel is hidden. Menu clicks are delivered to
 ``on_command`` from that thread: callers must hand them to the UI thread
 (for example through a queue polled with ``root.after``).
 """
+
 from __future__ import annotations
 
 import sys
 import threading
-from typing import Callable
+from collections.abc import Callable
 
 # (command, label). The order is the menu order. "emergency" is always visible.
 MENU_ITEMS: tuple[tuple[str, str], ...] = (
@@ -45,6 +46,7 @@ class TrayIcon:
     def stop(self) -> None:
         if sys.platform == "win32" and self._hwnd:
             import ctypes
+
             ctypes.windll.user32.PostMessageW(self._hwnd, 0x0010, 0, 0)  # WM_CLOSE
             if self._thread is not None:
                 self._thread.join(2)
@@ -59,36 +61,76 @@ class TrayIcon:
         WNDPROC = ctypes.WINFUNCTYPE(LRESULT, wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM)
 
         class WNDCLASSW(ctypes.Structure):
-            _fields_ = [("style", wintypes.UINT), ("lpfnWndProc", WNDPROC), ("cbClsExtra", ctypes.c_int),
-                        ("cbWndExtra", ctypes.c_int), ("hInstance", wintypes.HINSTANCE),
-                        ("hIcon", wintypes.HANDLE), ("hCursor", wintypes.HANDLE),
-                        ("hbrBackground", wintypes.HANDLE), ("lpszMenuName", wintypes.LPCWSTR),
-                        ("lpszClassName", wintypes.LPCWSTR)]
+            _fields_ = [
+                ("style", wintypes.UINT),
+                ("lpfnWndProc", WNDPROC),
+                ("cbClsExtra", ctypes.c_int),
+                ("cbWndExtra", ctypes.c_int),
+                ("hInstance", wintypes.HINSTANCE),
+                ("hIcon", wintypes.HANDLE),
+                ("hCursor", wintypes.HANDLE),
+                ("hbrBackground", wintypes.HANDLE),
+                ("lpszMenuName", wintypes.LPCWSTR),
+                ("lpszClassName", wintypes.LPCWSTR),
+            ]
 
         class GUID(ctypes.Structure):
-            _fields_ = [("a", wintypes.DWORD), ("b", wintypes.WORD), ("c", wintypes.WORD), ("d", ctypes.c_ubyte * 8)]
+            _fields_ = [
+                ("a", wintypes.DWORD),
+                ("b", wintypes.WORD),
+                ("c", wintypes.WORD),
+                ("d", ctypes.c_ubyte * 8),
+            ]
 
         class NOTIFYICONDATAW(ctypes.Structure):
-            _fields_ = [("cbSize", wintypes.DWORD), ("hWnd", wintypes.HWND), ("uID", wintypes.UINT),
-                        ("uFlags", wintypes.UINT), ("uCallbackMessage", wintypes.UINT),
-                        ("hIcon", wintypes.HANDLE), ("szTip", wintypes.WCHAR * 128),
-                        ("dwState", wintypes.DWORD), ("dwStateMask", wintypes.DWORD),
-                        ("szInfo", wintypes.WCHAR * 256), ("uTimeout", wintypes.UINT),
-                        ("szInfoTitle", wintypes.WCHAR * 64), ("dwInfoFlags", wintypes.DWORD),
-                        ("guidItem", GUID), ("hBalloonIcon", wintypes.HANDLE)]
+            _fields_ = [
+                ("cbSize", wintypes.DWORD),
+                ("hWnd", wintypes.HWND),
+                ("uID", wintypes.UINT),
+                ("uFlags", wintypes.UINT),
+                ("uCallbackMessage", wintypes.UINT),
+                ("hIcon", wintypes.HANDLE),
+                ("szTip", wintypes.WCHAR * 128),
+                ("dwState", wintypes.DWORD),
+                ("dwStateMask", wintypes.DWORD),
+                ("szInfo", wintypes.WCHAR * 256),
+                ("uTimeout", wintypes.UINT),
+                ("szInfoTitle", wintypes.WCHAR * 64),
+                ("dwInfoFlags", wintypes.DWORD),
+                ("guidItem", GUID),
+                ("hBalloonIcon", wintypes.HANDLE),
+            ]
 
         user32.DefWindowProcW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
         user32.DefWindowProcW.restype = LRESULT
         user32.CreateWindowExW.restype = wintypes.HWND
-        user32.CreateWindowExW.argtypes = [wintypes.DWORD, wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.DWORD,
-                                           ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int,
-                                           wintypes.HWND, wintypes.HANDLE, wintypes.HINSTANCE, wintypes.LPVOID]
+        user32.CreateWindowExW.argtypes = [
+            wintypes.DWORD,
+            wintypes.LPCWSTR,
+            wintypes.LPCWSTR,
+            wintypes.DWORD,
+            ctypes.c_int,
+            ctypes.c_int,
+            ctypes.c_int,
+            ctypes.c_int,
+            wintypes.HWND,
+            wintypes.HANDLE,
+            wintypes.HINSTANCE,
+            wintypes.LPVOID,
+        ]
         user32.LoadIconW.restype = wintypes.HANDLE
         user32.LoadIconW.argtypes = [wintypes.HINSTANCE, wintypes.LPCWSTR]
         user32.CreatePopupMenu.restype = wintypes.HANDLE
         user32.AppendMenuW.argtypes = [wintypes.HANDLE, wintypes.UINT, ctypes.c_size_t, wintypes.LPCWSTR]
-        user32.TrackPopupMenu.argtypes = [wintypes.HANDLE, wintypes.UINT, ctypes.c_int, ctypes.c_int,
-                                          ctypes.c_int, wintypes.HWND, wintypes.LPVOID]
+        user32.TrackPopupMenu.argtypes = [
+            wintypes.HANDLE,
+            wintypes.UINT,
+            ctypes.c_int,
+            ctypes.c_int,
+            ctypes.c_int,
+            wintypes.HWND,
+            wintypes.LPVOID,
+        ]
         user32.DestroyMenu.argtypes = [wintypes.HANDLE]
         user32.SetForegroundWindow.argtypes = [wintypes.HWND]
         user32.PostMessageW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
@@ -100,7 +142,9 @@ class TrayIcon:
         WM_LBUTTONDBLCLK, WM_RBUTTONUP = 0x0203, 0x0205
         NIM_ADD, NIM_DELETE = 0, 2
         taskbar_created = user32.RegisterWindowMessageW("TaskbarCreated")
-        icon = user32.LoadIconW(None, ctypes.cast(ctypes.c_void_p(32512), wintypes.LPCWSTR))  # IDI_APPLICATION
+        icon = user32.LoadIconW(
+            None, ctypes.cast(ctypes.c_void_p(32512), wintypes.LPCWSTR)
+        )  # IDI_APPLICATION
 
         def nid() -> NOTIFYICONDATAW:
             data = NOTIFYICONDATAW()
@@ -120,7 +164,9 @@ class TrayIcon:
             point = wintypes.POINT()
             user32.GetCursorPos(ctypes.byref(point))
             user32.SetForegroundWindow(self._hwnd)  # required so the menu closes on outside click
-            choice = user32.TrackPopupMenu(menu, 0x0100 | 0x0002, point.x, point.y, 0, self._hwnd, None)  # RETURNCMD|RIGHTBUTTON
+            choice = user32.TrackPopupMenu(
+                menu, 0x0100 | 0x0002, point.x, point.y, 0, self._hwnd, None
+            )  # RETURNCMD|RIGHTBUTTON
             user32.PostMessageW(self._hwnd, WM_NULL, 0, 0)
             user32.DestroyMenu(menu)
             if choice:
@@ -153,8 +199,9 @@ class TrayIcon:
         if not user32.RegisterClassW(ctypes.byref(wc)):
             self._ready.set()
             return
-        self._hwnd = user32.CreateWindowExW(0, wc.lpszClassName, "Guardian tray", 0, 0, 0, 0, 0,
-                                            None, None, wc.hInstance, None)
+        self._hwnd = user32.CreateWindowExW(
+            0, wc.lpszClassName, "Guardian tray", 0, 0, 0, 0, 0, None, None, wc.hInstance, None
+        )
         self._ok = bool(self._hwnd) and bool(shell32.Shell_NotifyIconW(NIM_ADD, ctypes.byref(nid())))
         self._ready.set()
         if not self._ok:

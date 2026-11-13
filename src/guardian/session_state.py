@@ -4,14 +4,15 @@ Stdlib only. Privacy: only the fields of SessionState are stored. No window
 titles, no URLs, no keystrokes. A pending quiz survives even when the session
 itself has ended or expired, so a reboot never loses an unanswered exam.
 """
+
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import datetime
 import json
 import os
-from pathlib import Path
 import tempfile
+from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
 
 SCHEMA_VERSION = 1
 
@@ -78,8 +79,11 @@ class SessionStore:
                 return INACTIVE
             active, topic, source = data["active"], data["topic"], data["source"]
             pending = data.get("pending", False)
-            if not all(isinstance(v, bool) for v in (active, pending)) or not isinstance(topic, str) \
-                    or not isinstance(source, str):
+            if (
+                not all(isinstance(v, bool) for v in (active, pending))
+                or not isinstance(topic, str)
+                or not isinstance(source, str)
+            ):
                 return INACTIVE
             windows = _parse_windows(data.get("windows", []))
             until = _parse(data.get("until"))
@@ -124,6 +128,7 @@ def parse_schedule(text: str) -> tuple[tuple[str, str], ...]:
 
 def _parse_windows(raw: object) -> tuple[tuple[str, str], ...]:
     from .core import within_study_window
+
     if not isinstance(raw, list):
         raise TypeError("windows must be a list")
     windows = []

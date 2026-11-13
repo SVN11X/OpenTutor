@@ -1,20 +1,24 @@
-from pathlib import Path
 import tempfile
 import unittest
 import zipfile
+from pathlib import Path
 
 from guardian.evidence.pptx_check import check_pptx
 from guardian.evidence.safe_zip import UnsafeArchive, open_safe
 
-NS = ('xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" '
-      'xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"')
+NS = (
+    'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" '
+    'xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"'
+)
 
 
 def slide_xml(title: str, body: str, titled: bool = True) -> str:
     ph = '<p:nvPr><p:ph type="title"/></p:nvPr>' if titled else "<p:nvPr/>"
-    return (f'<p:sld {NS}><p:cSld><p:spTree><p:sp><p:nvSpPr><p:cNvPr id="1" name="t"/><p:cNvSpPr/>{ph}</p:nvSpPr>'
-            f'<p:txBody><a:p><a:r><a:t>{title}</a:t></a:r></a:p><a:p><a:r><a:t>{body}</a:t></a:r></a:p></p:txBody>'
-            f'</p:sp></p:spTree></p:cSld></p:sld>')
+    return (
+        f'<p:sld {NS}><p:cSld><p:spTree><p:sp><p:nvSpPr><p:cNvPr id="1" name="t"/><p:cNvSpPr/>{ph}</p:nvSpPr>'
+        f"<p:txBody><a:p><a:r><a:t>{title}</a:t></a:r></a:p><a:p><a:r><a:t>{body}</a:t></a:r></a:p></p:txBody>"
+        f"</p:sp></p:spTree></p:cSld></p:sld>"
+    )
 
 
 class PptxTests(unittest.TestCase):
@@ -61,7 +65,9 @@ class PptxTests(unittest.TestCase):
     def test_zip_slip_and_bomb_rejected(self):
         slip = self.make("slip.pptx", slides=self.good(), extra={"../evil.txt": b"x"})
         self.assertEqual(check_pptx(slip).checks[0].name, "archive")
-        bomb = self.make("bomb.pptx", slides=self.good(), extra={"ppt/media/big.bin": b"\0" * (30 * 1024 * 1024)})
+        bomb = self.make(
+            "bomb.pptx", slides=self.good(), extra={"ppt/media/big.bin": b"\0" * (30 * 1024 * 1024)}
+        )
         with self.assertRaises(UnsafeArchive):
             open_safe(bomb)
 

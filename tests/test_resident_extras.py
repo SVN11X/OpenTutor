@@ -1,16 +1,16 @@
-from datetime import datetime, timedelta, timezone
-from http.server import BaseHTTPRequestHandler, HTTPServer
-from pathlib import Path
 import sys
 import tempfile
 import threading
 import unittest
 import uuid
+from datetime import UTC, datetime, timedelta
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from pathlib import Path
 
 from guardian import autostart, integrations
 from guardian.session_state import INACTIVE, SessionState, SessionStore, parse_schedule
 
-NOW = datetime(2026, 11, 13, 10, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 11, 13, 10, 0, tzinfo=UTC)
 
 
 class PendingAndScheduleTests(unittest.TestCase):
@@ -22,7 +22,9 @@ class PendingAndScheduleTests(unittest.TestCase):
     def test_pending_survives_inactive_and_expired_session(self):
         self.store.save(SessionState(False, pending=True))
         self.assertTrue(self.store.load(NOW).pending)
-        self.store.save(SessionState(True, NOW - timedelta(minutes=1), pending=True, windows=(("09:00", "12:00"),)))
+        self.store.save(
+            SessionState(True, NOW - timedelta(minutes=1), pending=True, windows=(("09:00", "12:00"),))
+        )
         kept = self.store.load(NOW)
         self.assertFalse(kept.active)
         self.assertTrue(kept.pending)
@@ -37,7 +39,9 @@ class PendingAndScheduleTests(unittest.TestCase):
     def test_bad_windows_rejected_on_load(self):
         self.store.path.write_text(
             '{"schema_version":1,"active":false,"until":null,"paused_until":null,'
-            '"topic":"x","source":"y","pending":true,"windows":[["25:00","26:00"]]}', encoding="utf-8")
+            '"topic":"x","source":"y","pending":true,"windows":[["25:00","26:00"]]}',
+            encoding="utf-8",
+        )
         self.assertEqual(self.store.load(NOW), INACTIVE)
 
     def test_parse_schedule(self):
@@ -73,7 +77,9 @@ class IntegrationProbeTests(unittest.TestCase):
         self.assertEqual(integrations.probe_http("x", self.base + "/ok").state, "ok")
         self.assertEqual(integrations.probe_http("x", self.base + "/missing").state, "incompatible")
         self.assertEqual(integrations.probe_http("x", self.base + "/boom").state, "degraded")
-        self.assertEqual(integrations.probe_http("x", "http://127.0.0.1:1/", timeout=0.5).state, "disconnected")
+        self.assertEqual(
+            integrations.probe_http("x", "http://127.0.0.1:1/", timeout=0.5).state, "disconnected"
+        )
 
     def test_focolocal_never_claims_connection(self):
         states = {h.name: h.state for h in integrations.check_all(bank_ok=True)}
@@ -96,6 +102,7 @@ class AutostartTests(unittest.TestCase):
             autostart.disable(key)  # idempotent
         finally:
             import winreg
+
             try:
                 winreg.DeleteKey(winreg.HKEY_CURRENT_USER, key)
             except OSError:
@@ -112,12 +119,19 @@ class AutostartTests(unittest.TestCase):
 class AutostartMigrationTests(unittest.TestCase):
     def test_stale_value_is_rewritten_and_missing_value_is_not_created(self):
         import winreg
+
         key = r"Software\OpenTutorGuardianTest" + uuid.uuid4().hex
         try:
             self.assertFalse(autostart.refresh_if_stale(Path("C:/repo"), key))
             self.assertFalse(autostart.is_enabled(key))
             with winreg.CreateKey(winreg.HKEY_CURRENT_USER, key) as k:
-                winreg.SetValueEx(k, autostart.VALUE_NAME, 0, winreg.REG_SZ, "pythonw -c from guardian_mvp.desktop import main")
+                winreg.SetValueEx(
+                    k,
+                    autostart.VALUE_NAME,
+                    0,
+                    winreg.REG_SZ,
+                    "pythonw -c from guardian_mvp.desktop import main",
+                )
             self.assertTrue(autostart.refresh_if_stale(Path("C:/repo"), key))
             with winreg.OpenKey(winreg.HKEY_CURRENT_USER, key) as k:
                 self.assertNotIn("guardian_mvp", winreg.QueryValueEx(k, autostart.VALUE_NAME)[0])

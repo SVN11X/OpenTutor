@@ -1,14 +1,14 @@
-from datetime import datetime, timedelta, timezone
 import json
-from pathlib import Path
 import tempfile
 import unittest
+import uuid
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 from guardian.session_state import INACTIVE, SessionState, SessionStore
 from guardian.single_instance import SingleInstance
-import uuid
 
-NOW = datetime(2026, 11, 13, 10, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 11, 13, 10, 0, tzinfo=UTC)
 
 
 class SessionStoreTests(unittest.TestCase):

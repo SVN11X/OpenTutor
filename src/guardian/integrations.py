@@ -3,11 +3,12 @@
 States: ok, degraded, incompatible, disconnected, unavailable.
 FocoLocal has no IPC yet (see docs/CONTRACTS.md), so it reports ``unavailable``.
 """
+
 from __future__ import annotations
 
-from dataclasses import dataclass
 import urllib.error
 import urllib.request
+from dataclasses import dataclass
 
 OLLAMA_URL = "http://127.0.0.1:11434/api/tags"
 

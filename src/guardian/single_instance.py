@@ -1,4 +1,5 @@
 """Single running instance per Windows user session. Stdlib only."""
+
 from __future__ import annotations
 
 import os
@@ -24,6 +25,7 @@ class SingleInstance:
             return
         if sys.platform == "win32":
             import ctypes
+
             ctypes.windll.kernel32.CloseHandle(self._handle)
             self._handle = None
         else:
@@ -33,7 +35,7 @@ class SingleInstance:
                 pass
         self._held = False
 
-    def __enter__(self) -> "SingleInstance":
+    def __enter__(self) -> SingleInstance:
         self.acquire()
         return self
 
@@ -43,6 +45,7 @@ class SingleInstance:
     def _acquire_win(self) -> bool:
         import ctypes
         from ctypes import wintypes
+
         kernel32 = ctypes.windll.kernel32
         kernel32.CreateMutexW.restype = wintypes.HANDLE
         kernel32.CreateMutexW.argtypes = [wintypes.LPVOID, wintypes.BOOL, wintypes.LPCWSTR]

@@ -6,12 +6,13 @@ Status meaning (rubric_version pptx-1):
 - passed: every deterministic rule holds. This is NOT credit: credit_eligible stays False
   until a reviewed defense exists (see docs/PRACTICE_VALIDATOR_PLAN.md).
 """
+
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from pathlib import Path
 import re
 import xml.etree.ElementTree as ET
+from dataclasses import dataclass, field
+from pathlib import Path
 
 from .safe_zip import UnsafeArchive, has_macros, open_safe
 
@@ -52,8 +53,9 @@ def _parse(xml: bytes) -> ET.Element:
         raise UnsafeArchive(f"XML dañado: {err}") from None
 
 
-def check_pptx(path: Path | str, *, expected_slides: int | None = None,
-               required_terms: tuple[str, ...] = ()) -> Result:
+def check_pptx(
+    path: Path | str, *, expected_slides: int | None = None, required_terms: tuple[str, ...] = ()
+) -> Result:
     if Path(path).suffix.lower() != ".pptx":
         return _fail("extension", "La extensión debe ser .pptx")
     try:
@@ -83,11 +85,21 @@ def check_pptx(path: Path | str, *, expected_slides: int | None = None,
         except UnsafeArchive as err:
             return _fail("xml", str(err))
     count_ok = expected_slides is None or len(numbers) == expected_slides
-    checks.append(Check("slide_count", count_ok, f"{len(numbers)} diapositivas"
-                        + ("" if count_ok else f", se esperaban {expected_slides}")))
+    checks.append(
+        Check(
+            "slide_count",
+            count_ok,
+            f"{len(numbers)} diapositivas" + ("" if count_ok else f", se esperaban {expected_slides}"),
+        )
+    )
     checks.append(Check("no_empty_slides", not empty, f"vacías: {empty}" if empty else ""))
-    checks.append(Check("no_placeholder_text", not placeholder_hits,
-                        f"texto de plantilla en: {placeholder_hits}" if placeholder_hits else ""))
+    checks.append(
+        Check(
+            "no_placeholder_text",
+            not placeholder_hits,
+            f"texto de plantilla en: {placeholder_hits}" if placeholder_hits else "",
+        )
+    )
     checks.append(Check("titles", titled == len(numbers), f"{titled}/{len(numbers)} con título"))
     non_empty = [t.casefold() for t in texts if t]
     checks.append(Check("no_duplicate_slides", len(set(non_empty)) == len(non_empty)))

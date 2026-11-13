@@ -2,12 +2,13 @@
 
 No score, source trust, question key or unlock policy is changed here.
 """
+
 from __future__ import annotations
 
-from dataclasses import dataclass
 import tkinter as tk
+from collections.abc import Sequence
+from dataclasses import dataclass
 from tkinter import ttk
-from typing import Sequence
 
 from .core import Question
 from .results import ExamReport, build_exam_report, report_as_text
@@ -30,6 +31,7 @@ PALE_GREEN = "#e9f7ef"
 @dataclass(frozen=True)
 class SidebarStatus:
     """Non-color-only status; unverified keys never claim correctness."""
+
     icon: str
     label: str
     accent: str
@@ -38,10 +40,12 @@ class SidebarStatus:
 def sidebar_status(verified: bool, correct: bool) -> SidebarStatus:
     """Color, icon and text agree without treating imported keys as ground truth."""
     if verified:
-        return (SidebarStatus("✓", "Correcta", GREEN) if correct else
-                SidebarStatus("×", "Incorrecta", RED))
-    return (SidebarStatus("≈", "Coincide con clave", BLUE) if correct else
-            SidebarStatus("≠", "Difiere de clave", AMBER))
+        return SidebarStatus("✓", "Correcta", GREEN) if correct else SidebarStatus("×", "Incorrecta", RED)
+    return (
+        SidebarStatus("≈", "Coincide con clave", BLUE)
+        if correct
+        else SidebarStatus("≠", "Difiere de clave", AMBER)
+    )
 
 
 def provisional_score_label(report: ExamReport) -> str:
@@ -68,12 +72,19 @@ def preview_explanation(text: str, limit: int = 270) -> tuple[str, bool]:
 
 
 def show_exam_result(
-    parent: tk.Tk, *, topic: str, questions: Sequence[Question],
-    answers: Sequence[int], score: int, passed: bool, source: str,
+    parent: tk.Tk,
+    *,
+    topic: str,
+    questions: Sequence[Question],
+    answers: Sequence[int],
+    score: int,
+    passed: bool,
+    source: str,
 ) -> tk.Toplevel:
     """One-question-at-a-time review, with predictable keyboard and scroll navigation."""
-    report = build_exam_report(topic=topic, questions=questions, answers=answers,
-                               score=score, passed=passed, source=source)
+    report = build_exam_report(
+        topic=topic, questions=questions, answers=answers, score=score, passed=passed, source=source
+    )
     win = tk.Toplevel(parent)
     win.title("OpenTutor Guardian · Revisión del examen")
     win.geometry("990x700")
@@ -87,38 +98,56 @@ def show_exam_result(
 
     header = tk.Frame(shell, bg=BG)
     header.pack(fill="x")
-    tk.Label(header, text="Revisa tus respuestas", bg=BG, fg=INK,
-             font=("Segoe UI", 18, "bold")).pack(side="left")
-    tk.Label(header, text=provisional_score_label(report), bg=BG,
-             fg=AMBER if not report.verified else BLUE,
-             font=("Segoe UI", 12, "bold")).pack(side="right")
+    tk.Label(header, text="Revisa tus respuestas", bg=BG, fg=INK, font=("Segoe UI", 18, "bold")).pack(
+        side="left"
+    )
+    tk.Label(
+        header,
+        text=provisional_score_label(report),
+        bg=BG,
+        fg=AMBER if not report.verified else BLUE,
+        font=("Segoe UI", 12, "bold"),
+    ).pack(side="right")
 
-    tk.Label(shell, text=f"Tema: {report.topic}   ·   {report.status}", bg=BG,
-             fg=MUTED if not report.verified else (GREEN if report.certified_pass else RED),
-             anchor="w", font=("Segoe UI", 10, "bold")).pack(fill="x", pady=(3, 10))
+    tk.Label(
+        shell,
+        text=f"Tema: {report.topic}   ·   {report.status}",
+        bg=BG,
+        fg=MUTED if not report.verified else (GREEN if report.certified_pass else RED),
+        anchor="w",
+        font=("Segoe UI", 10, "bold"),
+    ).pack(fill="x", pady=(3, 10))
 
     if not report.verified:
         alert = tk.Frame(shell, bg=PALE_AMBER, padx=12, pady=8)
         alert.pack(fill="x", pady=(0, 10))
         warning = tk.Label(
-            alert, bg=PALE_AMBER, fg="#79500a", justify="left", anchor="w",
+            alert,
+            bg=PALE_AMBER,
+            fg="#79500a",
+            justify="left",
+            anchor="w",
             text="Claves sin verificar: las coincidencias son orientativas y NO permiten desbloqueos.",
-            wraplength=880, font=("Segoe UI", 10),
+            wraplength=880,
+            font=("Segoe UI", 10),
         )
         warning.pack(fill="x")
         alert.bind("<Configure>", lambda ev: warning.configure(wraplength=max(260, ev.width - 30)))
 
     main = tk.Frame(shell, bg=BG)
     main.pack(fill="both", expand=True)
-    nav = tk.Frame(main, bg=WHITE, width=236, padx=9, pady=12,
-                   highlightbackground=BORDER, highlightthickness=1)
+    nav = tk.Frame(
+        main, bg=WHITE, width=236, padx=9, pady=12, highlightbackground=BORDER, highlightthickness=1
+    )
     nav.pack(side="left", fill="y", padx=(0, 12))
     nav.pack_propagate(False)
-    tk.Label(nav, text="REVISAR PREGUNTAS", bg=WHITE, fg=MUTED,
-             font=("Segoe UI", 9, "bold")).pack(anchor="w", pady=(0, 4))
+    tk.Label(nav, text="REVISAR PREGUNTAS", bg=WHITE, fg=MUTED, font=("Segoe UI", 9, "bold")).pack(
+        anchor="w", pady=(0, 4)
+    )
     if not report.verified:
-        tk.Label(nav, text="CLAVES SIN VERIFICAR", bg=WHITE, fg=AMBER,
-                 font=("Segoe UI", 8, "bold")).pack(anchor="w", pady=(0, 10))
+        tk.Label(nav, text="CLAVES SIN VERIFICAR", bg=WHITE, fg=AMBER, font=("Segoe UI", 8, "bold")).pack(
+            anchor="w", pady=(0, 10)
+        )
 
     detail = tk.Frame(main, bg=WHITE, highlightbackground=BORDER, highlightthickness=1)
     detail.pack(side="left", fill="both", expand=True)
@@ -143,12 +172,19 @@ def show_exam_result(
     selected_index = 0
     nav_rows: list[tuple[tk.Frame, tk.Button]] = []
 
-    def add_label(text: str, *, heading: bool = False, color: str = INK,
-                  pady: tuple[int, int] = (0, 10)) -> tk.Label:
-        label = tk.Label(body, text=text, bg=WHITE, fg=color,
-                         font=("Segoe UI", 10 if heading else 11,
-                               "bold" if heading else "normal"),
-                         anchor="nw", justify="left", wraplength=max(250, canvas.winfo_width() - 74))
+    def add_label(
+        text: str, *, heading: bool = False, color: str = INK, pady: tuple[int, int] = (0, 10)
+    ) -> tk.Label:
+        label = tk.Label(
+            body,
+            text=text,
+            bg=WHITE,
+            fg=color,
+            font=("Segoe UI", 10 if heading else 11, "bold" if heading else "normal"),
+            anchor="nw",
+            justify="left",
+            wraplength=max(250, canvas.winfo_width() - 74),
+        )
         label.pack(fill="x", anchor="w", pady=pady)
         dynamic_labels.append(label)
         return label
@@ -163,21 +199,29 @@ def show_exam_result(
         for i, (row, button) in enumerate(nav_rows):
             selected = i == index
             row.configure(highlightbackground=BLUE if selected else BORDER)
-            button.configure(bg=PALE_BLUE if selected else WHITE,
-                             activebackground=PALE_BLUE)
+            button.configure(bg=PALE_BLUE if selected else WHITE, activebackground=PALE_BLUE)
 
         state = sidebar_status(report.verified, item.correct)
-        add_label(f"PREGUNTA {item.number} DE {len(report.items)}   ·   "
-                  f"{state.icon} {state.label.upper()}",
-                  heading=True, color=state.accent, pady=(0, 12))
+        add_label(
+            f"PREGUNTA {item.number} DE {len(report.items)}   ·   {state.icon} {state.label.upper()}",
+            heading=True,
+            color=state.accent,
+            pady=(0, 12),
+        )
         add_label(item.question, pady=(0, 18))
 
         add_label("TU RESPUESTA", heading=True, color=MUTED, pady=(0, 5))
-        add_label(item.selected,
-                  color=INK if not report.verified else (GREEN if item.correct else RED),
-                  pady=(0, 15))
-        add_label("SEGÚN LA CLAVE ORIGINAL" if not report.verified else "RESPUESTA CORRECTA",
-                  heading=True, color=MUTED, pady=(0, 5))
+        add_label(
+            item.selected,
+            color=INK if not report.verified else (GREEN if item.correct else RED),
+            pady=(0, 15),
+        )
+        add_label(
+            "SEGÚN LA CLAVE ORIGINAL" if not report.verified else "RESPUESTA CORRECTA",
+            heading=True,
+            color=MUTED,
+            pady=(0, 5),
+        )
         add_label(item.expected, color=INK, pady=(0, 18))
 
         add_label("EXPLICACIÓN DEL BANCO", heading=True, color=MUTED, pady=(0, 7))
@@ -195,8 +239,7 @@ def show_exam_result(
             expand_btn = ttk.Button(body, text="Leer explicación completa", command=toggle_full)
             expand_btn.pack(anchor="w", pady=(0, 12))
         if not report.verified:
-            add_label("Texto original, posiblemente en inglés y aún sin validar.",
-                      color=MUTED, pady=(0, 8))
+            add_label("Texto original, posiblemente en inglés y aún sin validar.", color=MUTED, pady=(0, 8))
         prev_button.configure(state="normal" if index > 0 else "disabled")
         next_button.configure(state="normal" if index < len(report.items) - 1 else "disabled")
         position.configure(text=f"Pregunta {index + 1} de {len(report.items)}")
@@ -204,20 +247,30 @@ def show_exam_result(
 
     for i, item in enumerate(report.items):
         status = sidebar_status(report.verified, item.correct)
-        row = tk.Frame(nav, bg=WHITE, highlightbackground=BORDER,
-                       highlightthickness=1)
+        row = tk.Frame(nav, bg=WHITE, highlightbackground=BORDER, highlightthickness=1)
         row.pack(fill="x", pady=3)
         # Vertical accent + Unicode symbol + text: no reliance on color alone.
         stripe = tk.Frame(row, width=5, bg=status.accent)
         stripe.pack(side="left", fill="y")
         stripe.pack_propagate(False)
         button = tk.Button(
-            row, text=f"{item.number}   {status.icon} {status.label}",
+            row,
+            text=f"{item.number}   {status.icon} {status.label}",
             command=lambda n=i: show_item(n),
-            font=("Segoe UI", 10), anchor="w", justify="left",
-            wraplength=180, padx=10, pady=10, bg=WHITE, fg=status.accent,
-            relief="flat", bd=0, cursor="hand2", activeforeground=status.accent,
-            activebackground=PALE_BLUE, highlightthickness=0,
+            font=("Segoe UI", 10),
+            anchor="w",
+            justify="left",
+            wraplength=180,
+            padx=10,
+            pady=10,
+            bg=WHITE,
+            fg=status.accent,
+            relief="flat",
+            bd=0,
+            cursor="hand2",
+            activeforeground=status.accent,
+            activebackground=PALE_BLUE,
+            highlightthickness=0,
         )
         button.pack(side="left", fill="x", expand=True)
         nav_rows.append((row, button))
@@ -225,8 +278,10 @@ def show_exam_result(
     def wheel(event: tk.Event) -> None:
         # Scroll only if the mouse is inside the details pane.
         x, y = win.winfo_pointerxy()
-        if not (canvas.winfo_rootx() <= x < canvas.winfo_rootx() + canvas.winfo_width()
-                and canvas.winfo_rooty() <= y < canvas.winfo_rooty() + canvas.winfo_height()):
+        if not (
+            canvas.winfo_rootx() <= x < canvas.winfo_rootx() + canvas.winfo_width()
+            and canvas.winfo_rooty() <= y < canvas.winfo_rooty() + canvas.winfo_height()
+        ):
             return
         if getattr(event, "delta", 0):
             canvas.yview_scroll(-int(event.delta / 120) or (-1 if event.delta > 0 else 1), "units")
@@ -247,18 +302,22 @@ def show_exam_result(
 
     navigation_footer = tk.Frame(footer, bg=BG)
     navigation_footer.pack(side="right", padx=(0, 20))
-    prev_button = ttk.Button(navigation_footer, text="← Anterior",
-                             command=lambda: show_item(selected_index - 1))
+    prev_button = ttk.Button(
+        navigation_footer, text="← Anterior", command=lambda: show_item(selected_index - 1)
+    )
     prev_button.pack(side="left", padx=4)
     position = tk.Label(navigation_footer, bg=BG, fg=MUTED, font=("Segoe UI", 9))
     position.pack(side="left", padx=8)
-    next_button = ttk.Button(navigation_footer, text="Siguiente →",
-                             command=lambda: show_item(selected_index + 1))
+    next_button = ttk.Button(
+        navigation_footer, text="Siguiente →", command=lambda: show_item(selected_index + 1)
+    )
     next_button.pack(side="left", padx=4)
 
     win.bind("<Left>", lambda _ev: show_item(selected_index - 1) if selected_index > 0 else None)
-    win.bind("<Right>", lambda _ev: show_item(selected_index + 1)
-             if selected_index < len(report.items) - 1 else None)
+    win.bind(
+        "<Right>",
+        lambda _ev: show_item(selected_index + 1) if selected_index < len(report.items) - 1 else None,
+    )
     win.bind("<Escape>", lambda _ev: win.destroy())
     show_item(next((i for i, item in enumerate(report.items) if not item.correct), 0))
     win.lift()

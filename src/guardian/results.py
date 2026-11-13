@@ -1,8 +1,9 @@
 """Read-only exam result models, independent of any desktop toolkit."""
+
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Sequence
 
 from .core import CERTIFIED_QUESTION_SOURCES, Question
 
@@ -33,15 +34,20 @@ class ExamReport:
 
 
 def build_exam_report(
-    *, topic: str, questions: Sequence[Question], answers: Sequence[int],
-    score: int, passed: bool, source: str,
+    *,
+    topic: str,
+    questions: Sequence[Question],
+    answers: Sequence[int],
+    score: int,
+    passed: bool,
+    source: str,
 ) -> ExamReport:
     """Prepare presentation from original records; do not reinterpret keys."""
     if len(questions) != 5 or len(answers) != 5:
         raise ValueError("El informe requiere cinco preguntas y cinco respuestas")
     if any(type(a) is not int or a not in range(4) for a in answers):
         raise ValueError("Respuesta fuera de rango")
-    computed = sum(a == q.answer_index for q, a in zip(questions, answers))
+    computed = sum(a == q.answer_index for q, a in zip(questions, answers, strict=True))
     if score != computed:
         raise ValueError("La puntuación no coincide con las respuestas")
     verified = source in CERTIFIED_QUESTION_SOURCES
@@ -49,14 +55,16 @@ def build_exam_report(
     certified = bool(passed and verified)
     items = tuple(
         ReviewedAnswer(
-            number=i, question=q.prompt, selected=q.options[answer],
-            expected=q.options[q.answer_index], explanation=q.explanation,
+            number=i,
+            question=q.prompt,
+            selected=q.options[answer],
+            expected=q.options[q.answer_index],
+            explanation=q.explanation,
             correct=answer == q.answer_index,
         )
-        for i, (q, answer) in enumerate(zip(questions, answers), 1)
+        for i, (q, answer) in enumerate(zip(questions, answers, strict=True), 1)
     )
-    return ExamReport(topic=topic, score=score,
-                      certified_pass=certified, verified=verified, items=items)
+    return ExamReport(topic=topic, score=score, certified_pass=certified, verified=verified, items=items)
 
 
 def report_as_text(report: ExamReport) -> str:
@@ -69,10 +77,14 @@ def report_as_text(report: ExamReport) -> str:
     if not report.verified:
         lines.append("Claves originales sin verificar. No habilita desbloqueos.")
     for item in report.items:
-        lines.extend([
-            "", f"Pregunta {item.number} · {'Correcta' if item.correct else 'A revisar'}",
-            item.question, f"Tu respuesta: {item.selected}",
-            f"Respuesta según clave: {item.expected}",
-            f"Explicación original: {item.explanation}",
-        ])
+        lines.extend(
+            [
+                "",
+                f"Pregunta {item.number} · {'Correcta' if item.correct else 'A revisar'}",
+                item.question,
+                f"Tu respuesta: {item.selected}",
+                f"Respuesta según clave: {item.expected}",
+                f"Explicación original: {item.explanation}",
+            ]
+        )
     return "\n".join(lines)

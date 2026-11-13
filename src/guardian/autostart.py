@@ -2,6 +2,7 @@
 
 The user turns it on and off explicitly. Disabling removes only Guardian's own value.
 """
+
 from __future__ import annotations
 
 import sys
@@ -26,6 +27,7 @@ def _winreg():
     if sys.platform != "win32":
         raise OSError("Autostart is only available on Windows")
     import winreg
+
     return winreg
 
 

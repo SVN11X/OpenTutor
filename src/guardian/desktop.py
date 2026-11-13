@@ -1,26 +1,25 @@
 """Opt-in Windows desktop prototype: non-privileged, no browser blocking."""
+
 from __future__ import annotations
 
 import argparse
 import ctypes
-from ctypes import wintypes
-from datetime import datetime, timedelta, timezone
 import os
-from pathlib import Path
+import queue
 import sys
 import threading
 import time
 import tkinter as tk
+from ctypes import wintypes
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from tkinter import messagebox, ttk
 
-import queue
-
-from .core import ResultStore, SurpriseClock, attempt_label
+from . import autostart, fieldnotes, integrations
+from .core import ResultStore, SurpriseClock, attempt_label, within_study_window
 from .questions import get_questions
 from .results_ui import show_exam_result
 from .session_state import SessionState, SessionStore, parse_schedule
-from . import autostart, fieldnotes, integrations
-from .core import within_study_window
 from .single_instance import SingleInstance
 from .tray import TrayIcon
 
@@ -47,7 +46,9 @@ class GuardianUI:
         self.root.title("OpenTutor Guardian — v0.2")
         self.root.geometry("560x600")
         self.root.minsize(520, 560)
-        app_data = Path(os.environ.get("LOCALAPPDATA", str(Path.home() / ".local" / "share"))) / "OpenTutorGuardian"
+        app_data = (
+            Path(os.environ.get("LOCALAPPDATA", str(Path.home() / ".local" / "share"))) / "OpenTutorGuardian"
+        )
         self.store = ResultStore(app_data / "guardian_mvp.sqlite3")
         self.clock = SurpriseClock(interval=(20, 30) if demo else (600, 1500))
         self.session_store = SessionStore(app_data / "session.json")
@@ -92,29 +93,45 @@ class GuardianUI:
         frame = ttk.Frame(self.root, padding=(14, 12))
         frame.pack(fill="both", expand=True)
         ttk.Label(frame, text="OpenTutor Guardian", font=("Segoe UI", 16, "bold")).pack(anchor="w")
-        ttk.Label(frame, text="No bloquea aplicaciones ni navegadores · sin telemetría").pack(anchor="w", pady=(0, 6))
+        ttk.Label(frame, text="No bloquea aplicaciones ni navegadores · sin telemetría").pack(
+            anchor="w", pady=(0, 6)
+        )
         self.tabs = ttk.Notebook(frame)
         self.tabs.pack(fill="both", expand=True)
         today, tasks, reviews, progress, settings = (ttk.Frame(self.tabs, padding=12) for _ in range(5))
-        for page, name in ((today, "Hoy"), (tasks, "Tareas"), (reviews, "Repasos"),
-                           (progress, "Progreso"), (settings, "Ajustes")):
+        for page, name in (
+            (today, "Hoy"),
+            (tasks, "Tareas"),
+            (reviews, "Repasos"),
+            (progress, "Progreso"),
+            (settings, "Ajustes"),
+        ):
             self.tabs.add(page, text=name)
         self.tabs.enable_traversal()  # Ctrl+Tab and Ctrl+PgUp/PgDn
 
         # Hoy: state, next review, session controls, integration health, emergency
-        ttk.Label(today, textvariable=self.status, foreground="#1a4f8a", wraplength=500,
-                  font=("Segoe UI", 10, "bold")).pack(anchor="w")
+        ttk.Label(
+            today,
+            textvariable=self.status,
+            foreground="#1a4f8a",
+            wraplength=500,
+            font=("Segoe UI", 10, "bold"),
+        ).pack(anchor="w")
         ttk.Label(today, textvariable=self.next_review).pack(anchor="w", pady=(6, 0))
         ttk.Label(today, textvariable=self.last_result).pack(anchor="w", pady=(2, 8))
         controls = ttk.Frame(today)
         controls.pack(anchor="w", pady=(0, 8))
-        ttk.Button(controls, text="Iniciar estudio (60 min)", command=self._start).pack(side="left", padx=(0, 7))
+        ttk.Button(controls, text="Iniciar estudio (60 min)", command=self._start).pack(
+            side="left", padx=(0, 7)
+        )
         ttk.Button(controls, text="Pausar 15 min", command=self._pause).pack(side="left", padx=(0, 7))
         ttk.Button(controls, text="Terminar", command=self._stop).pack(side="left")
         ttk.Button(today, text="Hacer examen ahora", command=self._open_quiz).pack(anchor="w", pady=(0, 10))
         ttk.Label(today, text="Servicios", font=("Segoe UI", 10, "bold")).pack(anchor="w")
         ttk.Label(today, textvariable=self.health, wraplength=500, justify="left").pack(anchor="w")
-        ttk.Label(today, text="Restricciones: ninguna. El bloqueo de ocio aún no existe.").pack(anchor="w", pady=(6, 10))
+        ttk.Label(today, text="Restricciones: ninguna. El bloqueo de ocio aún no existe.").pack(
+            anchor="w", pady=(6, 10)
+        )
         row = ttk.Frame(today)
         row.pack(anchor="w")
         ttk.Button(row, text="Emergencia", command=self._emergency).pack(side="left", padx=(0, 7))
@@ -123,33 +140,55 @@ class GuardianUI:
 
         # Tareas: honest empty state, nothing simulated
         ttk.Label(tasks, text="◌ Sin tareas", font=("Segoe UI", 11, "bold")).pack(anchor="w")
-        ttk.Label(tasks, wraplength=500, justify="left", text=(
-            "Las tareas prácticas (por ejemplo una presentación de 5 diapositivas) llegan en la "
-            "Entrega B. Hoy solo existe el examen de 5 preguntas.")).pack(anchor="w", pady=6)
+        ttk.Label(
+            tasks,
+            wraplength=500,
+            justify="left",
+            text=(
+                "Las tareas prácticas (por ejemplo una presentación de 5 diapositivas) llegan en la "
+                "Entrega B. Hoy solo existe el examen de 5 preguntas."
+            ),
+        ).pack(anchor="w", pady=6)
 
         # Repasos: pending exam and recent results
         ttk.Label(reviews, textvariable=self.pending_text, font=("Segoe UI", 10, "bold")).pack(anchor="w")
-        ttk.Label(reviews, text="Resultados recientes", font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(10, 2))
+        ttk.Label(reviews, text="Resultados recientes", font=("Segoe UI", 10, "bold")).pack(
+            anchor="w", pady=(10, 2)
+        )
         ttk.Label(reviews, textvariable=self.recent_text, justify="left", wraplength=500).pack(anchor="w")
 
         # Progreso
         ttk.Label(progress, textvariable=self.stats, font=("Segoe UI", 10, "bold")).pack(anchor="w")
         ttk.Label(progress, textvariable=self.average_text).pack(anchor="w", pady=4)
-        ttk.Label(progress, wraplength=500, justify="left", text=(
-            "◐ Práctica = clave sin verificar: cuenta para estudiar, nunca para desbloquear nada.")).pack(anchor="w", pady=6)
+        ttk.Label(
+            progress,
+            wraplength=500,
+            justify="left",
+            text=("◐ Práctica = clave sin verificar: cuenta para estudiar, nunca para desbloquear nada."),
+        ).pack(anchor="w", pady=6)
 
         # Ajustes
         for title, var in (("Tema de estudio:", self.topic), ("Modelo Ollama:", self.model)):
             ttk.Label(settings, text=title).pack(anchor="w")
             ttk.Entry(settings, textvariable=var).pack(fill="x", pady=(0, 6))
         ttk.Label(settings, text="Origen de las preguntas:").pack(anchor="w")
-        ttk.Combobox(settings, textvariable=self.question_source, state="readonly",
-                     values=("Banco local (rápido)", "Banco completo (práctica)", "Ollama (puede tardar)"),
-                     width=38).pack(anchor="w", pady=(0, 6))
-        ttk.Label(settings, text="Horario autorizado (HH:MM-HH:MM, separado por comas; vacío = sin horario):").pack(anchor="w")
+        ttk.Combobox(
+            settings,
+            textvariable=self.question_source,
+            state="readonly",
+            values=("Banco local (rápido)", "Banco completo (práctica)", "Ollama (puede tardar)"),
+            width=38,
+        ).pack(anchor="w", pady=(0, 6))
+        ttk.Label(
+            settings, text="Horario autorizado (HH:MM-HH:MM, separado por comas; vacío = sin horario):"
+        ).pack(anchor="w")
         ttk.Entry(settings, textvariable=self.schedule).pack(fill="x", pady=(0, 6))
-        ttk.Checkbutton(settings, text="Iniciar Guardian con Windows (oculto en bandeja)",
-                        variable=self.autostart_var, command=self._toggle_autostart).pack(anchor="w")
+        ttk.Checkbutton(
+            settings,
+            text="Iniciar Guardian con Windows (oculto en bandeja)",
+            variable=self.autostart_var,
+            command=self._toggle_autostart,
+        ).pack(anchor="w")
 
     def _refresh_views(self) -> None:
         """Recompute the read-only panels from SQLite and the clock. Cheap, UI thread."""
@@ -158,16 +197,26 @@ class GuardianUI:
         avg = self.store.average_score()
         self.average_text.set("Promedio: sin datos" if avg is None else f"Promedio: {avg:.1f}/5")
         recent = self.store.recent_attempts()
-        self.recent_text.set("\n".join(
-            f"{when[:16].replace('T', ' ')}  {topic}  {attempt_label(score, ok, src)}"
-            for when, topic, score, ok, src in recent) or "Aún no hay exámenes.")
-        self.last_result.set(f"Último resultado: {attempt_label(recent[0][2], recent[0][3], recent[0][4])}"
-                             if recent else "Último resultado: ninguno")
-        self.pending_text.set("● Examen pendiente: pulsa 'Hacer examen ahora'" if self.pending
-                              else "○ Sin examen pendiente")
+        self.recent_text.set(
+            "\n".join(
+                f"{when[:16].replace('T', ' ')}  {topic}  {attempt_label(score, ok, src)}"
+                for when, topic, score, ok, src in recent
+            )
+            or "Aún no hay exámenes."
+        )
+        self.last_result.set(
+            f"Último resultado: {attempt_label(recent[0][2], recent[0][3], recent[0][4])}"
+            if recent
+            else "Último resultado: ninguno"
+        )
+        self.pending_text.set(
+            "● Examen pendiente: pulsa 'Hacer examen ahora'" if self.pending else "○ Sin examen pendiente"
+        )
         if self.enabled and self.until is not None:
             left = max(0, int(self.clock.target - self.clock.eligible))
-            self.next_review.set(f"Siguiente repaso: en unos {max(1, left // 60)} min de actividad (aleatorio)")
+            self.next_review.set(
+                f"Siguiente repaso: en unos {max(1, left // 60)} min de actividad (aleatorio)"
+            )
         else:
             self.next_review.set("Siguiente repaso: sin sesión activa")
 
@@ -175,10 +224,17 @@ class GuardianUI:
     def _persist(self) -> None:
         active = self.enabled and self.until is not None
         paused = self.pause_until if self.pause_until > _now() else None
-        self.session_store.save(SessionState(
-            active=active, until=self.until if active else None, paused_until=paused if active else None,
-            topic=self.topic.get().strip() or "Google Cloud", source=self.question_source.get(),
-            pending=self.pending, windows=self.windows))
+        self.session_store.save(
+            SessionState(
+                active=active,
+                until=self.until if active else None,
+                paused_until=paused if active else None,
+                topic=self.topic.get().strip() or "Google Cloud",
+                source=self.question_source.get(),
+                pending=self.pending,
+                windows=self.windows,
+            )
+        )
 
     def _restore_session(self) -> None:
         saved = self.session_store.load(_now())
@@ -239,7 +295,9 @@ class GuardianUI:
         try:
             if self.autostart_var.get():
                 autostart.enable(_REPO_ROOT)
-                self.status.set("Autoarranque activado (solo tu usuario). Se desactiva con esta misma casilla")
+                self.status.set(
+                    "Autoarranque activado (solo tu usuario). Se desactiva con esta misma casilla"
+                )
             else:
                 autostart.disable()
                 self.status.set("Autoarranque desactivado")
@@ -250,12 +308,14 @@ class GuardianUI:
     def _refresh_health(self) -> None:
         def work() -> None:
             try:
-                text = "  ·  ".join(h.text() for h in integrations.check_all(
-                    bank_ok=fieldnotes.find_bank_path() is not None))
+                text = "  ·  ".join(
+                    h.text() for h in integrations.check_all(bank_ok=fieldnotes.find_bank_path() is not None)
+                )
                 self.root.after(0, lambda: self.health.set(text))
                 self.root.after(30000, self._refresh_health)
             except (tk.TclError, RuntimeError):
                 pass  # window closed while probing
+
         threading.Thread(target=work, daemon=True).start()
 
     # ---- window / tray ----
@@ -271,8 +331,14 @@ class GuardianUI:
         try:
             while True:
                 cmd = self.commands.get_nowait()
-                {"open": self._show, "start": self._start, "pause": self._pause,
-                 "stop": self._stop, "emergency": self._emergency, "exit": self._exit}.get(cmd, lambda: None)()
+                {
+                    "open": self._show,
+                    "start": self._start,
+                    "pause": self._pause,
+                    "stop": self._stop,
+                    "emergency": self._emergency,
+                    "exit": self._exit,
+                }.get(cmd, lambda: None)()
         except queue.Empty:
             pass
         except tk.TclError:
@@ -292,8 +358,11 @@ class GuardianUI:
             if self.enabled and self.until is not None and now >= self.until:
                 self._stop()
             due = self.clock.tick(
-                elapsed, active=is_user_active(),
-                allowed=self.enabled and now >= self.pause_until and self.until is not None
+                elapsed,
+                active=is_user_active(),
+                allowed=self.enabled
+                and now >= self.pause_until
+                and self.until is not None
                 and (not self.windows or within_study_window(now, self.windows)),
                 protected=self.in_quiz,
             )
@@ -315,11 +384,15 @@ class GuardianUI:
         notice.resizable(False, False)
         notice.attributes("-topmost", True)
         w, h = 350, 132
-        notice.geometry(f"{w}x{h}+{max(0, notice.winfo_screenwidth() - w - 36)}+{max(0, notice.winfo_screenheight() - h - 95)}")
+        x = max(0, notice.winfo_screenwidth() - w - 36)
+        y = max(0, notice.winfo_screenheight() - h - 95)
+        notice.geometry(f"{w}x{h}+{x}+{y}")
         _no_activate(notice)  # appear without taking keyboard focus from the user's work
         body = ttk.Frame(notice, padding=12)
         body.pack(fill="both", expand=True)
-        ttk.Label(body, text="¡Repaso sorpresa! Tienes 5 preguntas pendientes.", wraplength=315).pack(anchor="w")
+        ttk.Label(body, text="¡Repaso sorpresa! Tienes 5 preguntas pendientes.", wraplength=315).pack(
+            anchor="w"
+        )
         actions = ttk.Frame(body)
         actions.pack(anchor="e", pady=10)
 
@@ -347,10 +420,18 @@ class GuardianUI:
             if popup.winfo_exists():
                 popup.destroy()
         self.in_quiz = True
-        mode = ("bank-practice" if self.question_source.get().startswith("Banco completo")
-                else "bank-only" if self.question_source.get().startswith("Banco") else "ollama")
-        self.status.set("Cargando preguntas del banco local…" if mode != "ollama"
-                        else "Generando preguntas con Ollama (máximo 30 s)…")
+        mode = (
+            "bank-practice"
+            if self.question_source.get().startswith("Banco completo")
+            else "bank-only"
+            if self.question_source.get().startswith("Banco")
+            else "ollama"
+        )
+        self.status.set(
+            "Cargando preguntas del banco local…"
+            if mode != "ollama"
+            else "Generando preguntas con Ollama (máximo 30 s)…"
+        )
         topic = self.topic.get().strip() or "Google Cloud"
         model = self.model.get().strip() or "qwen3.5:4b"
         recent = self.store.recent_prompts()
@@ -362,6 +443,7 @@ class GuardianUI:
             except Exception as err:
                 msg = str(err)
                 self.root.after(0, lambda: self._generation_failed(msg))
+
         threading.Thread(target=work, daemon=True).start()
 
     def _generation_failed(self, error: str) -> None:
@@ -396,9 +478,11 @@ class GuardianUI:
         title.pack(anchor="w", pady=(0, 15))
         choices = ttk.Frame(content)
         choices.pack(fill="x")
-        note = ("Práctica: claves originales sin verificar; no otorga desbloqueos."
-                if source.startswith("fieldnotes-practice") else
-                "Apruebas con 4 de 5. Puedes salir sin penalización.")
+        note = (
+            "Práctica: claves originales sin verificar; no otorga desbloqueos."
+            if source.startswith("fieldnotes-practice")
+            else "Apruebas con 4 de 5. Puedes salir sin penalización."
+        )
         tip = ttk.Label(content, text=note)
         tip.pack(anchor="w", pady=20)
 
@@ -414,34 +498,48 @@ class GuardianUI:
             for child in choices.winfo_children():
                 child.destroy()
             for i, opt in enumerate(q.options):
-                tk.Radiobutton(choices, text=opt, value=i, variable=selected,
-                               anchor="w", justify="left", wraplength=640).pack(anchor="w", pady=8)
+                tk.Radiobutton(
+                    choices, text=opt, value=i, variable=selected, anchor="w", justify="left", wraplength=640
+                ).pack(anchor="w", pady=8)
             canvas.yview_moveto(0)
             finish.configure(text="Corregir examen" if current == 4 else "Siguiente")
 
         def next_question() -> None:
             nonlocal current
             if selected.get() not in range(4):
-                messagebox.showinfo("Respuesta pendiente", "Selecciona una respuesta para continuar", parent=window)
+                messagebox.showinfo(
+                    "Respuesta pendiente", "Selecciona una respuesta para continuar", parent=window
+                )
                 return
             answers.append(selected.get())
             if current < 4:
                 current += 1
                 render()
                 return
-            score, passed = self.store.record(topic=topic, questions=questions, answers=answers, source=source)
+            score, passed = self.store.record(
+                topic=topic, questions=questions, answers=answers, source=source
+            )
             self.clock.reset_after_quiz()
             self.pending = False
             self.in_quiz = False
             self._persist()
             self._refresh_stats()
             window.destroy()
-            unverified = source not in {"fieldnotes-reviewed", "fieldnotes+fallback-reviewed", "fallback-reviewed"}
+            unverified = source not in {
+                "fieldnotes-reviewed",
+                "fieldnotes+fallback-reviewed",
+                "fallback-reviewed",
+            }
             state = "Práctica (sin verificación)" if unverified else ("Aprobado" if passed else "Repasar")
             self.status.set(f"Resultado: {score}/5 · {state} · {source}")
             show_exam_result(
-                self.root, topic=topic, questions=questions, answers=answers,
-                score=score, passed=passed, source=source,
+                self.root,
+                topic=topic,
+                questions=questions,
+                answers=answers,
+                score=score,
+                passed=passed,
+                source=source,
             )
 
         finish = ttk.Button(content, command=next_question)
@@ -479,7 +577,7 @@ def _no_activate(window: tk.Toplevel) -> None:
 
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-_EPOCH = datetime.min.replace(tzinfo=timezone.utc)
+_EPOCH = datetime.min.replace(tzinfo=UTC)
 
 
 def _now() -> datetime:

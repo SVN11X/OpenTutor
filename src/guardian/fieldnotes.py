@@ -3,16 +3,16 @@
 Never copy/modify source questions, images or answer keys. Only questions
 explicitly reviewed and gradable in the source are candidates for scoring.
 """
+
 from __future__ import annotations
 
-from functools import lru_cache
 import json
 import os
+from functools import lru_cache
 from pathlib import Path
 from random import SystemRandom
 
 from .core import Question
-
 
 BANK_ENV = "GUARDIAN_GCP_BANK"
 BANK_DIR = "GCP_Data_Engineer_Fieldnotes"
@@ -28,10 +28,12 @@ def find_bank_path(explicit: Path | str | None = None) -> Path | None:
         locations.append(Path(os.environ[BANK_ENV]))
     else:
         # Typical Windows layout: C:/my_drive/Portafolio/{OpenTutor,GCP_...}
-        locations.extend([
-            Path(__file__).resolve().parents[3] / BANK_DIR,
-            Path.cwd().parent / BANK_DIR,
-        ])
+        locations.extend(
+            [
+                Path(__file__).resolve().parents[3] / BANK_DIR,
+                Path.cwd().parent / BANK_DIR,
+            ]
+        )
     for location in locations:
         candidate = location if location.suffix.lower() == ".json" else location / BANK_FILE
         if candidate.is_file():
@@ -42,7 +44,7 @@ def find_bank_path(explicit: Path | str | None = None) -> Path | None:
 @lru_cache(maxsize=4)
 def _load_questions(path: str, mtime_ns: int, size: int, reviewed_only: bool) -> tuple[Question, ...]:
     """Cache by file metadata; skip incomplete/unreviewed/image questions."""
-    with open(path, "r", encoding="utf-8") as handle:
+    with open(path, encoding="utf-8") as handle:
         payload = json.load(handle)
     if not isinstance(payload, dict) or not isinstance(payload.get("questions"), list):
         raise ValueError("Formato del banco Fieldnotes inválido")
@@ -75,10 +77,7 @@ def _load_questions(path: str, mtime_ns: int, size: int, reviewed_only: bool) ->
             # Do not manufacture a source-supported explanation.
             explanation = "Pregunta revisada en Fieldnotes; consulta allí la fundamentación."
         if not reviewed_only:
-            explanation = (
-                "Clave original sin verificar; no garantiza validez. "
-                + explanation
-            )
+            explanation = "Clave original sin verificar; no garantiza validez. " + explanation
         try:
             result.append(Question(prompt, tuple(options), letters.index(answer[0]), explanation))
         except ValueError:
@@ -86,8 +85,9 @@ def _load_questions(path: str, mtime_ns: int, size: int, reviewed_only: bool) ->
     return tuple(result)
 
 
-def reviewed_questions(recent: set[str], *, bank_path: Path | str | None = None,
-                       limit: int = 5, reviewed_only: bool = True) -> list[Question]:
+def reviewed_questions(
+    recent: set[str], *, bank_path: Path | str | None = None, limit: int = 5, reviewed_only: bool = True
+) -> list[Question]:
     """Fast local selection. Does not invoke the network or write to Fieldnotes."""
     path = find_bank_path(bank_path)
     if path is None:

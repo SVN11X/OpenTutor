@@ -1,8 +1,9 @@
 """Open untrusted ZIP-based files (pptx, docx) without extracting or executing anything."""
+
 from __future__ import annotations
 
-from pathlib import Path, PurePosixPath
 import zipfile
+from pathlib import Path, PurePosixPath
 
 MAX_ENTRIES = 2000
 MAX_TOTAL_BYTES = 200 * 1024 * 1024

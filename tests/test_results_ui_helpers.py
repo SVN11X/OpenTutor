@@ -1,18 +1,23 @@
 """UI-specific tests: trust cues are descriptive; scoring stays in results.py."""
+
 import unittest
+
 from guardian.core import Question
 from guardian.results import build_exam_report
-from guardian.results_ui import (answer_status_label, preview_explanation,
-                                     provisional_score_label)
+from guardian.results_ui import answer_status_label, preview_explanation, provisional_score_label
 
 
 class ResultUIHelperTests(unittest.TestCase):
     def _report(self, source):
-        questions = [Question(f"Question {i}", ("A", "B", "C", "D"), 0, "Expl.")
-                     for i in range(5)]
-        return build_exam_report(topic="Google Cloud", questions=questions,
-                                 answers=[1, 1, 1, 1, 1], score=0, passed=False,
-                                 source=source)
+        questions = [Question(f"Question {i}", ("A", "B", "C", "D"), 0, "Expl.") for i in range(5)]
+        return build_exam_report(
+            topic="Google Cloud",
+            questions=questions,
+            answers=[1, 1, 1, 1, 1],
+            score=0,
+            passed=False,
+            source=source,
+        )
 
     def test_unverified_score_is_labeled_provisional(self):
         label = provisional_score_label(self._report("fieldnotes-practice-unverified"))

@@ -5,7 +5,11 @@ from datetime import datetime
 from pathlib import Path
 
 from guardian.core import (
-    Question, SurpriseClock, ResultStore, grade, validate_questions, within_study_window,
+    ResultStore,
+    SurpriseClock,
+    grade,
+    validate_questions,
+    within_study_window,
 )
 from guardian.questions import FALLBACK_GCP, get_questions
 
@@ -60,8 +64,12 @@ class GuardianTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             p = Path(d) / "guardian.sqlite"
             db = ResultStore(p)
-            db.record(topic="gcp", questions=FALLBACK_GCP[:5],
-                      answers=[x.answer_index for x in FALLBACK_GCP[:5]], source="fallback-reviewed")
+            db.record(
+                topic="gcp",
+                questions=FALLBACK_GCP[:5],
+                answers=[x.answer_index for x in FALLBACK_GCP[:5]],
+                source="fallback-reviewed",
+            )
             self.assertEqual(db.stats(), (1, 1))
             db.close()
             db = ResultStore(p)
@@ -73,10 +81,12 @@ class GuardianTests(unittest.TestCase):
 if __name__ == "__main__":
     unittest.main()
 
+
 class QuestionsFailureTests(unittest.TestCase):
     def test_unknown_topic_does_not_invent_fallback(self):
         from unittest.mock import patch
         from urllib.error import URLError
+
         with patch("guardian.questions.urlopen", side_effect=URLError("offline")):
             with self.assertRaisesRegex(RuntimeError, "no hay banco revisado"):
                 get_questions("topología algebraica", set())
@@ -84,10 +94,13 @@ class QuestionsFailureTests(unittest.TestCase):
     def test_gcp_offline_uses_reviewed_bank(self):
         from unittest.mock import patch
         from urllib.error import URLError
+
         # Hermetic: point the bank override at a missing file so a real Fieldnotes
         # checkout on this machine cannot change which source is used.
-        with patch.dict("os.environ", {"GUARDIAN_GCP_BANK": "Z:/does-not-exist/imported.json"}), \
-                patch("guardian.questions.urlopen", side_effect=URLError("offline")):
+        with (
+            patch.dict("os.environ", {"GUARDIAN_GCP_BANK": "Z:/does-not-exist/imported.json"}),
+            patch("guardian.questions.urlopen", side_effect=URLError("offline")),
+        ):
             questions, source = get_questions("GCP", set())
         self.assertEqual(len(questions), 5)
         self.assertEqual(source, "fallback-reviewed")

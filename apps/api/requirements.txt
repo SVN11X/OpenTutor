@@ -1,4 +1,0 @@
-# Backward-compatible entrypoint.
-# Host/local installs should prefer requirements-core.txt.
-# Docker, CI, and full integration installs should use requirements-full.txt.
--r requirements-full.txt

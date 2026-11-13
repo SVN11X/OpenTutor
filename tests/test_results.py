@@ -1,7 +1,7 @@
 import unittest
 
-from guardian_mvp.core import Question, ResultStore
-from guardian_mvp.results import build_exam_report, report_as_text
+from guardian.core import Question, ResultStore
+from guardian.results import build_exam_report, report_as_text
 from pathlib import Path
 from tempfile import TemporaryDirectory
 

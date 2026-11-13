@@ -2,7 +2,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from guardian_mvp.core import Question, ResultStore, attempt_label
+from guardian.core import Question, ResultStore, attempt_label
 
 
 def _questions():

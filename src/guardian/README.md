@@ -35,14 +35,14 @@ reducida, no un producto completo ni un bloqueo estricto todavía.
 ## Ejecutar (en PowerShell desde la raíz del repositorio)
 
 ```powershell
-python -m unittest discover -s guardian_mvp/tests -v
-python -m guardian_mvp.desktop
+python -m unittest discover -s tests -v
+python -m guardian.desktop
 ```
 
 Para probar rápidamente las alertas sin esperar 10–25 min:
 
 ```powershell
-python -m guardian_mvp.desktop --demo
+python -m guardian.desktop --demo
 ```
 
 Selecciona **Banco local (rápido)** para cinco preguntas revisadas de Google Cloud.
@@ -94,8 +94,8 @@ no commits/push/merge no autorizados.
 
 Run from the repository root in Windows PowerShell:
 
-    .\guardian_mvp\run_dev.ps1            # tests, then the panel
-    .\guardian_mvp\run_dev.ps1 -Hidden    # starts hidden in the tray
+    .\scripts\run-dev.ps1            # tests, then the panel
+    .\scripts\run-dev.ps1 -Hidden    # starts hidden in the tray
 
 - Tray menu: Abrir panel, Iniciar sesión, Pausar, Terminar, Emergencia, Salir.
 - Closing the window hides it to the tray. If the tray icon could not be created, closing exits.

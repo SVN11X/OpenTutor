@@ -4,8 +4,8 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from guardian_mvp.session_state import INACTIVE, SessionState, SessionStore
-from guardian_mvp.single_instance import SingleInstance
+from guardian.session_state import INACTIVE, SessionState, SessionStore
+from guardian.single_instance import SingleInstance
 import uuid
 
 NOW = datetime(2026, 11, 13, 10, 0, tzinfo=timezone.utc)

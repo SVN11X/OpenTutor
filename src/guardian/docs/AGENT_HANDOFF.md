@@ -37,7 +37,7 @@ irreversibles. El parche actual es un MVP no privilegiado: **no es el producto f
 
 ## Validación del parche inicial (no repetir por defecto)
 
-`python -m unittest discover -s guardian_mvp/tests -v`
+`python -m unittest discover -s tests -v`
 
 Luego validar GUI manualmente en Windows, primero con `--demo`, y registrar
 por qué y cuándo la prueba debe repetirse. No anunciar que la GUI está validada

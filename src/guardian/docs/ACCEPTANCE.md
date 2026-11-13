@@ -16,9 +16,9 @@
 
 ## Cómo probar sin reiniciar la batería histórica
 
-1. `python -m unittest discover -s guardian_mvp/tests -v`
+1. `python -m unittest discover -s tests -v`
 2. Revisar únicamente archivos del módulo Guardian.
-3. En Windows: `python -m guardian_mvp.desktop --demo`.
+3. En Windows: `python -m guardian.desktop --demo`.
 4. Validar arranque opt-in, aviso, cinco preguntas, 4/5, 3/5, historial,
    salida, Ollama detenido y reinicio.
 5. Registrar comando, commit/huella, sistema y resultado. En caso de cambio

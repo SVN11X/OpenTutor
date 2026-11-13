@@ -7,8 +7,8 @@ import threading
 import unittest
 import uuid
 
-from guardian_mvp import autostart, integrations
-from guardian_mvp.session_state import INACTIVE, SessionState, SessionStore, parse_schedule
+from guardian import autostart, integrations
+from guardian.session_state import INACTIVE, SessionState, SessionStore, parse_schedule
 
 NOW = datetime(2026, 11, 13, 10, 0, tzinfo=timezone.utc)
 
@@ -104,7 +104,30 @@ class AutostartTests(unittest.TestCase):
     def test_command_is_hidden_and_user_level(self):
         cmd = autostart.build_command(Path("C:/repo"), sys.executable)
         self.assertIn("--hidden", cmd)
-        self.assertIn("guardian_mvp.desktop", cmd)
+        self.assertIn("guardian.desktop", cmd)
+        self.assertIn("src", cmd)
+
+
+@unittest.skipUnless(sys.platform == "win32", "Windows registry only")
+class AutostartMigrationTests(unittest.TestCase):
+    def test_stale_value_is_rewritten_and_missing_value_is_not_created(self):
+        import winreg
+        key = r"Software\OpenTutorGuardianTest" + uuid.uuid4().hex
+        try:
+            self.assertFalse(autostart.refresh_if_stale(Path("C:/repo"), key))
+            self.assertFalse(autostart.is_enabled(key))
+            with winreg.CreateKey(winreg.HKEY_CURRENT_USER, key) as k:
+                winreg.SetValueEx(k, autostart.VALUE_NAME, 0, winreg.REG_SZ, "pythonw -c from guardian_mvp.desktop import main")
+            self.assertTrue(autostart.refresh_if_stale(Path("C:/repo"), key))
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, key) as k:
+                self.assertNotIn("guardian_mvp", winreg.QueryValueEx(k, autostart.VALUE_NAME)[0])
+            self.assertFalse(autostart.refresh_if_stale(Path("C:/repo"), key))
+        finally:
+            autostart.disable(key)
+            try:
+                winreg.DeleteKey(winreg.HKEY_CURRENT_USER, key)
+            except OSError:
+                pass
 
 
 if __name__ == "__main__":

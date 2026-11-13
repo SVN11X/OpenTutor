@@ -4,10 +4,10 @@ import unittest
 from datetime import datetime
 from pathlib import Path
 
-from guardian_mvp.core import (
+from guardian.core import (
     Question, SurpriseClock, ResultStore, grade, validate_questions, within_study_window,
 )
-from guardian_mvp.questions import FALLBACK_GCP, get_questions
+from guardian.questions import FALLBACK_GCP, get_questions
 
 
 class GuardianTests(unittest.TestCase):
@@ -77,7 +77,7 @@ class QuestionsFailureTests(unittest.TestCase):
     def test_unknown_topic_does_not_invent_fallback(self):
         from unittest.mock import patch
         from urllib.error import URLError
-        with patch("guardian_mvp.questions.urlopen", side_effect=URLError("offline")):
+        with patch("guardian.questions.urlopen", side_effect=URLError("offline")):
             with self.assertRaisesRegex(RuntimeError, "no hay banco revisado"):
                 get_questions("topología algebraica", set())
 
@@ -87,7 +87,7 @@ class QuestionsFailureTests(unittest.TestCase):
         # Hermetic: point the bank override at a missing file so a real Fieldnotes
         # checkout on this machine cannot change which source is used.
         with patch.dict("os.environ", {"GUARDIAN_GCP_BANK": "Z:/does-not-exist/imported.json"}), \
-                patch("guardian_mvp.questions.urlopen", side_effect=URLError("offline")):
+                patch("guardian.questions.urlopen", side_effect=URLError("offline")):
             questions, source = get_questions("GCP", set())
         self.assertEqual(len(questions), 5)
         self.assertEqual(source, "fallback-reviewed")

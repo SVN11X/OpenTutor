@@ -29,7 +29,7 @@ def find_bank_path(explicit: Path | str | None = None) -> Path | None:
     else:
         # Typical Windows layout: C:/my_drive/Portafolio/{OpenTutor,GCP_...}
         locations.extend([
-            Path(__file__).resolve().parents[2] / BANK_DIR,
+            Path(__file__).resolve().parents[3] / BANK_DIR,
             Path.cwd().parent / BANK_DIR,
         ])
     for location in locations:

@@ -17,7 +17,8 @@ def build_command(repo_root: Path, python_exe: str | None = None) -> str:
     windowless = exe.with_name("pythonw.exe")
     if windowless.exists():
         exe = windowless
-    code = f"import sys; sys.path.insert(0, r'{repo_root}'); from guardian_mvp.desktop import main; main()"
+    src = repo_root / "src"
+    code = f"import sys; sys.path.insert(0, r'{src}'); from guardian.desktop import main; main()"
     return f'"{exe}" -c "{code}" --hidden'
 
 
@@ -42,6 +43,20 @@ def enable(repo_root: Path, run_key: str = RUN_KEY) -> None:
     wr = _winreg()
     with wr.CreateKey(wr.HKEY_CURRENT_USER, run_key) as key:
         wr.SetValueEx(key, VALUE_NAME, 0, wr.REG_SZ, build_command(repo_root))
+
+
+def refresh_if_stale(repo_root: Path, run_key: str = RUN_KEY) -> bool:
+    """Rewrite an autostart value made before the guardian_mvp to guardian rename. True if rewritten."""
+    try:
+        wr = _winreg()
+        with wr.OpenKey(wr.HKEY_CURRENT_USER, run_key) as key:
+            value, _kind = wr.QueryValueEx(key, VALUE_NAME)
+    except OSError:
+        return False
+    if "guardian_mvp" not in str(value):
+        return False
+    enable(repo_root, run_key)
+    return True
 
 
 def disable(run_key: str = RUN_KEY) -> None:

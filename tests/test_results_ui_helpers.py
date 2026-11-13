@@ -1,8 +1,8 @@
 """UI-specific tests: trust cues are descriptive; scoring stays in results.py."""
 import unittest
-from guardian_mvp.core import Question
-from guardian_mvp.results import build_exam_report
-from guardian_mvp.results_ui import (answer_status_label, preview_explanation,
+from guardian.core import Question
+from guardian.results import build_exam_report
+from guardian.results_ui import (answer_status_label, preview_explanation,
                                      provisional_score_label)
 
 

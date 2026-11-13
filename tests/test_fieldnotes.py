@@ -5,9 +5,9 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from guardian_mvp.fieldnotes import find_bank_path, reviewed_questions
-from guardian_mvp.questions import get_questions
-from guardian_mvp.core import ResultStore
+from guardian.fieldnotes import find_bank_path, reviewed_questions
+from guardian.questions import get_questions
+from guardian.core import ResultStore
 
 
 def sample(index, *, status="reviewed", gradable=True, images=False, required=1):
@@ -37,7 +37,7 @@ class FieldnotesTests(unittest.TestCase):
     def test_uses_local_bank_before_ollama_and_preserves_bytes(self):
         self.write([sample(i) for i in range(1, 8)])
         original = self.path.read_bytes()
-        with patch("guardian_mvp.questions.urlopen", side_effect=AssertionError("Ollama should not run")):
+        with patch("guardian.questions.urlopen", side_effect=AssertionError("Ollama should not run")):
             questions, source = get_questions("Google Cloud", set(), mode="bank-only", bank_path=self.repo)
         self.assertEqual(source, "fieldnotes-reviewed")
         self.assertEqual(len(questions), 5)

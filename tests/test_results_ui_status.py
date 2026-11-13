@@ -1,7 +1,7 @@
 """Color-independent sidebar states, including provisional imported keys."""
 import unittest
 
-from guardian_mvp.results_ui import (
+from guardian.results_ui import (
     AMBER, BLUE, GREEN, RED, sidebar_status,
 )
 

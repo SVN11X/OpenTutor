@@ -3,8 +3,8 @@ import tempfile
 import unittest
 import zipfile
 
-from guardian_mvp.evidence.pptx_check import check_pptx
-from guardian_mvp.evidence.safe_zip import UnsafeArchive, open_safe
+from guardian.evidence.pptx_check import check_pptx
+from guardian.evidence.safe_zip import UnsafeArchive, open_safe
 
 NS = ('xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" '
       'xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"')

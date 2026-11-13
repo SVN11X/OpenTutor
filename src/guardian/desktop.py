@@ -72,6 +72,7 @@ class GuardianUI:
         self.windows: tuple[tuple[str, str], ...] = ()
         self.schedule = tk.StringVar(value="")
         self.health = tk.StringVar(value="Comprobando servicios…")
+        autostart.refresh_if_stale(_REPO_ROOT)  # migrate a pre-rename Run value, never creates one
         self.autostart_var = tk.BooleanVar(value=autostart.is_enabled())
         self._render()
         self._refresh_stats()
@@ -237,7 +238,7 @@ class GuardianUI:
     def _toggle_autostart(self) -> None:
         try:
             if self.autostart_var.get():
-                autostart.enable(Path(__file__).resolve().parent.parent)
+                autostart.enable(_REPO_ROOT)
                 self.status.set("Autoarranque activado (solo tu usuario). Se desactiva con esta misma casilla")
             else:
                 autostart.disable()
@@ -477,6 +478,7 @@ def _no_activate(window: tk.Toplevel) -> None:
         pass  # cosmetic hardening only
 
 
+_REPO_ROOT = Path(__file__).resolve().parents[2]
 _EPOCH = datetime.min.replace(tzinfo=timezone.utc)
 
 

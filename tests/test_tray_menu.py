@@ -1,7 +1,7 @@
 import sys
 import unittest
 
-from guardian_mvp.tray import MENU_ITEMS, TrayIcon
+from guardian.tray import MENU_ITEMS, TrayIcon
 
 
 class TrayMenuTests(unittest.TestCase):

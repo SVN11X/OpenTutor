@@ -21,7 +21,7 @@ desktop agent. The web app and API were removed on purpose: everything here runs
 ## What does not exist yet
 
 No app or website blocking, no FocoLocal integration, no installer, no practical-task flow in the panel.
-See `guardian/docs/` for the design notes and audits.
+See `docs/` for the usage guide, design notes and audits.
 
 ## Run (Windows PowerShell, from the repository root)
 

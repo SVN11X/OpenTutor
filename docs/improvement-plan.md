@@ -6,7 +6,7 @@ Order: structure, standard files, security, build and tests, docs, then product.
 ## Structure (yellow, needs approval)
 
 - [x] YELLOW: git mv guardian_mvp/ to src/guardian/ and tests to tests/, fix imports, fieldnotes parents[3], autostart path and rewrite of the old Run value, move run_dev.ps1 to scripts/, update CI and README. Keep guardian_mvp.sqlite3.
-- [ ] YELLOW: move guardian_mvp/docs/*.md into docs/ and the ADR into docs/decisions/ without translating, delete AGENT_HANDOFF.md if obsolete, and fold guardian_mvp/README.md into README.md. Separate PR.
+- [x] YELLOW: move guardian_mvp/docs/*.md into docs/ and the ADR into docs/decisions/ without translating, delete AGENT_HANDOFF.md if obsolete, and fold guardian_mvp/README.md into README.md. Separate PR.
 
 ## Standard files (green)
 

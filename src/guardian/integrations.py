@@ -1,7 +1,7 @@
 """Honest health of the services Guardian can use. Local probes only, no telemetry.
 
 States: ok, degraded, incompatible, disconnected, unavailable.
-FocoLocal has no IPC yet (see docs/CONTRACTS.md), so it reports ``unavailable``.
+FocoLocal has no IPC yet (see docs/contracts.md), so it reports ``unavailable``.
 """
 
 from __future__ import annotations

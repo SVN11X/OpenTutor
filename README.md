@@ -16,19 +16,19 @@ desktop agent. The web app and API were removed on purpose: everything here runs
 - 5-question quiz from a local question bank first, Ollama (local, optional) only when you pick it.
 - Unverified questions are always practice and never count as certified.
 - Panel tabs: Hoy, Tareas, Repasos, Progreso, Ajustes. Status uses icon and text, not only color.
-- Deterministic PPTX validator (`guardian_mvp/evidence`), not wired to the panel yet.
+- Deterministic PPTX validator (`guardian/evidence`), not wired to the panel yet.
 
 ## What does not exist yet
 
 No app or website blocking, no FocoLocal integration, no installer, no practical-task flow in the panel.
-See `guardian_mvp/docs/` for the design notes and audits.
+See `guardian/docs/` for the design notes and audits.
 
 ## Run (Windows PowerShell, from the repository root)
 
 ```
-.\guardian_mvp\run_dev.ps1
-.\guardian_mvp\run_dev.ps1 -Hidden
-.\guardian_mvp\run_dev.ps1 -TestsOnly
+.\scripts\run-dev.ps1
+.\scripts\run-dev.ps1 -Hidden
+.\scripts\run-dev.ps1 -TestsOnly
 ```
 
 Requires Python 3.11 or newer with tkinter. No third-party packages. No network except the

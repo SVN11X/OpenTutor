@@ -26,5 +26,5 @@ We aim to acknowledge reports within 48 hours and provide a fix within 7 days fo
   Set `AUTH_ENABLED=true` and configure a strong `JWT_SECRET_KEY` (>= 32 characters).
 - **Rotate API keys regularly.** Never commit `.env` files to version control.
 - **Use HTTPS in production.** The CSRF middleware automatically sets `Secure` cookies in production mode.
-- **Keep dependencies updated.** Run `pip-audit` and `npm audit` regularly.
+- **Keep dependencies updated.** Run `pip-audit` regularly.
 - **Use container isolation for code sandbox.** Set `CODE_SANDBOX_BACKEND=container` in production.

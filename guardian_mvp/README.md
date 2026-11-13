@@ -1,7 +1,7 @@
-# OpenTutor Guardian — MVP experimental (Windows)
+# OpenTutor Guardian — notas de uso (Windows)
 
-Este directorio es un primer parche **aditivo** sobre el fork de OpenTutor.
-Mantiene el núcleo intacto y no modifica FocoLocal. Es una prueba funcional
+Este directorio es un agente de escritorio local.
+No modifica FocoLocal. Es una prueba funcional
 reducida, no un producto completo ni un bloqueo estricto todavía.
 
 ## Incluido / no incluido
@@ -20,12 +20,10 @@ reducida, no un producto completo ni un bloqueo estricto todavía.
 
 **Pendiente (no afirmar como implementado)**
 
-- Integración API de OpenTutor, conocimiento del usuario y planificador.
-- Inicio automático al iniciar sesión, icono de bandeja y UI nativa definitiva.
 - Detección fiable de reuniones, presentaciones y tareas sensibles.
-- Entregas PPTX, revisión de contenido y defensa oral/escrita.
-- API/IPC con FocoLocal y bloqueo de aplicaciones/navegadores; no hay bloqueo alguno en este MVP.
-- Instalador `.exe`, pruebas GUI reales en Windows y revisión pedagógica humana de preguntas generadas.
+- Entregas PPTX conectadas al panel, revisión de contenido y defensa oral/escrita.
+- API/IPC con FocoLocal y bloqueo de aplicaciones/navegadores; no hay bloqueo alguno.
+- Instalador `.exe`, pruebas GUI reales con DPI y dos monitores, revisión pedagógica humana.
 
 ## Prerrequisitos
 

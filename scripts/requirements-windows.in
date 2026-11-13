@@ -1,2 +1,0 @@
-# Windows CPython 3.12 x64: derive runtime dependencies from patched main.
--r ../apps/api/requirements-core.txt

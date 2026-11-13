@@ -1,4 +1,4 @@
-# Contratos futuros — Guardian ⇆ OpenTutor ⇆ FocoLocal
+# Contratos futuros. Guardian ⇆ OpenTutor ⇆ FocoLocal
 
 **Estado:** diseño, NO implementado. No inventar endpoints que los repositorios
 no exponen. Auditar el código real antes de codificar adaptadores.

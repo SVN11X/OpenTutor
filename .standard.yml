@@ -1,0 +1,27 @@
+# Identity of this repository for the standard.
+# After editing, run: python .standards/scripts/standard.py agents .
+standard: SVN11X/standards@v1
+owner: SVN11X
+name: OpenTutor-Guardian
+profile: software
+setup: done
+license: MIT
+content_language: es
+github:
+  description: Local-first Windows desktop agent for spaced study with surprise 5-question quizzes.
+  homepage: ''
+  topics:
+  - software
+options:
+  kind: desktop
+  architecture: simple
+  layout: single
+  language: python
+parts: {}
+part_options: {}
+extra_folders: {}
+skills:
+- repo-improve
+- code-review
+- tool-radar
+- antislop-code

@@ -1,4 +1,4 @@
-# OpenTutor Guardian — notas de uso (Windows)
+# OpenTutor Guardian. notas de uso (Windows)
 
 Este directorio es un agente de escritorio local.
 No modifica FocoLocal. Es una prueba funcional

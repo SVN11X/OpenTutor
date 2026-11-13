@@ -70,3 +70,12 @@ source-release/
 
 # Isolated native build/audit tools
 .venv-build/
+
+# standard
+.standards/
+*.py[cod]
+build/
+target/
+coverage/
+.pytest_cache/
+.ruff_cache/

@@ -25,6 +25,9 @@ Status: draft.
 - `src/guardian/fieldnotes.py` and `src/guardian/questions.py`: the question sources.
 - `src/guardian/integrations.py`: honest health of Ollama and FocoLocal.
 - `src/guardian/evidence/pptx_check.py`: the deterministic PPTX rubric, safe ZIP reading and no macros.
+- `src/guardian/evidence/md_check.py`: the Markdown rubric (sections, empty sections, placeholders, duplicates).
+- `src/guardian/evidence/pdf_check.py`: the PDF rubric (structure, active content, page count, bomb limits).
+- `src/guardian/evidence/check.py`: one entry point for the three file kinds.
 - `src/guardian/evidence/defense.py`: three questions about the owner's own file, with decoys that never appear in it.
 - `src/guardian/task_store.py`: hand-written tasks and the evidence handed in, in SQLite.
 - `src/guardian/evidence_ui.py`: the Tareas and Evidencia tabs.
@@ -39,4 +42,4 @@ Run: `.\scripts\run-dev.ps1`. Check: `.\scripts\run-dev.ps1 -TestsOnly`.
 
 ## Not covered
 
-No blocking of apps or sites, no FocoLocal link, no installer, no practical tasks in the panel, and no real-device check of high DPI, two monitors or suspension yet.
+No blocking of apps or sites, no FocoLocal link, no installer, no leisure credit, and no real-device check of high DPI, two monitors or suspension yet.

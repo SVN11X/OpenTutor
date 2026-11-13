@@ -41,6 +41,8 @@ class Result:
     titles: tuple[str, ...] = ()
     vocabulary: tuple[str, ...] = ()
     full_text: str = ""
+    kind: str = "pptx"  # pptx, md or pdf
+    unit_count: int = 0  # slides, sections or pages
 
 
 def _slide_title(root: ET.Element) -> str:
@@ -129,5 +131,10 @@ def check_pptx(
         status = "passed"
     words = sorted({w.casefold() for w in re.findall(r"\w{4,}", blob)})[:500]
     return Result(
-        status, tuple(checks), titles=tuple(titles), vocabulary=tuple(words), full_text=blob[:200_000]
+        status,
+        tuple(checks),
+        titles=tuple(titles),
+        vocabulary=tuple(words),
+        full_text=blob[:200_000],
+        unit_count=len(numbers),
     )

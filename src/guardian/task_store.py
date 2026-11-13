@@ -16,6 +16,7 @@ from pathlib import Path
 MAX_TITLE = 120
 MAX_TERMS = 10
 MAX_TERM_LENGTH = 40
+KINDS = ("pptx", "md", "pdf")
 
 # Final status of a submission. "validated" is evidence only: there is no leisure credit system yet.
 FAILED, NEEDS_REVIEW, PENDING_DEFENSE, VALIDATED = "failed", "needs_review", "pending_defense", "validated"
@@ -49,6 +50,7 @@ class Task:
     title: str
     expected_slides: int
     required_terms: tuple[str, ...]
+    kind: str = "pptx"
 
 
 @dataclass(frozen=True)
@@ -107,14 +109,25 @@ class TaskStore:
         try:
             for statement in _SCHEMA:
                 con.execute(statement)
+            columns = {row[1] for row in con.execute("PRAGMA table_info(guardian_tasks)")}
+            if "kind" not in columns:  # database created before task kinds existed
+                con.execute("ALTER TABLE guardian_tasks ADD COLUMN kind TEXT NOT NULL DEFAULT 'pptx'")
+                con.commit()
         except sqlite3.Error:
             con.close()
             raise
         return con
 
     def add_task(
-        self, title: str, expected_slides: int, terms: str | list[str] | tuple[str, ...] = ()
+        self,
+        title: str,
+        expected_slides: int,
+        terms: str | list[str] | tuple[str, ...] = (),
+        kind: str = "pptx",
     ) -> int:
+        """expected_slides is the number of slides, sections or pages, depending on kind."""
+        if kind not in KINDS:
+            raise ValueError("Tipo de tarea desconocido")
         title = title.strip()
         if not title or len(title) > MAX_TITLE:
             raise ValueError(f"El título es obligatorio y admite hasta {MAX_TITLE} caracteres")
@@ -123,19 +136,19 @@ class TaskStore:
         cleaned = clean_terms(terms)
         with closing(self._connect()) as con, con:
             cur = con.execute(
-                "INSERT INTO guardian_tasks (title, expected_slides, required_terms_json, created_at)"
-                " VALUES (?, ?, ?, ?)",
-                (title, expected_slides, json.dumps(list(cleaned), ensure_ascii=False), _now()),
+                "INSERT INTO guardian_tasks (title, expected_slides, required_terms_json, created_at, kind)"
+                " VALUES (?, ?, ?, ?, ?)",
+                (title, expected_slides, json.dumps(list(cleaned), ensure_ascii=False), _now(), kind),
             )
             return int(cur.lastrowid)
 
     def list_tasks(self) -> list[Task]:
         with closing(self._connect()) as con:
             rows = con.execute(
-                "SELECT id, title, expected_slides, required_terms_json FROM guardian_tasks"
+                "SELECT id, title, expected_slides, required_terms_json, kind FROM guardian_tasks"
                 " WHERE archived = 0 ORDER BY id"
             ).fetchall()
-        return [Task(i, t, n, tuple(json.loads(terms))) for i, t, n, terms in rows]
+        return [Task(i, t, n, tuple(json.loads(terms)), kind) for i, t, n, terms, kind in rows]
 
     def archive_task(self, task_id: int) -> None:
         with closing(self._connect()) as con, con:

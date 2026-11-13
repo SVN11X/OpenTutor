@@ -14,8 +14,9 @@ from collections.abc import Callable
 from tkinter import filedialog, messagebox, ttk
 
 from .core import Question
+from .evidence.check import KIND_INFO, KINDS, check_file
 from .evidence.defense import build_defense
-from .evidence.pptx_check import Result, check_pptx
+from .evidence.pptx_check import Result
 from .task_store import FAILED, NEEDS_REVIEW, PENDING_DEFENSE, VALIDATED, Task, TaskStore
 
 log = logging.getLogger(__name__)
@@ -38,6 +39,14 @@ CHECK_LABELS = {
     "archive": "Archivo válido",
     "macros": "Sin macros",
     "slides": "Tiene diapositivas",
+    "readable": "Archivo legible",
+    "safe_streams": "Sin flujos sospechosos",
+    "active_content": "Sin contenido activo",
+    "page_count": "Cantidad de páginas",
+    "section_count": "Cantidad de secciones",
+    "no_empty_sections": "Sin secciones vacías",
+    "no_duplicate_headings": "Sin títulos repetidos",
+    "min_words": "Extensión suficiente",
     "xml": "Contenido legible",
     "slide_count": "Cantidad de diapositivas",
     "no_empty_slides": "Sin diapositivas vacías",
@@ -60,6 +69,8 @@ class EvidencePanel:
         self.tasks: list[Task] = []
         self.title = tk.StringVar()
         self.slides = tk.IntVar(value=5)
+        self.kind_name = tk.StringVar(value=KIND_INFO["pptx"]["name"])
+        self.count_label = tk.StringVar(value="Diapositivas:")
         self.terms = tk.StringVar()
         self.message = tk.StringVar(value="")
         self.latest = tk.StringVar(value="Aún no entregaste ningún trabajo.")
@@ -76,7 +87,7 @@ class EvidencePanel:
         self.listbox.pack(fill="x", pady=(4, 4))
         row = ttk.Frame(parent)
         row.pack(anchor="w", pady=(0, 8))
-        self.submit_button = ttk.Button(row, text="Entregar .pptx…", command=self._submit)
+        self.submit_button = ttk.Button(row, text="Entregar archivo…", command=self._submit)
         self.submit_button.pack(side="left", padx=(0, 7))
         ttk.Button(row, text="Archivar tarea", command=self._archive).pack(side="left")
         ttk.Label(parent, text="Nueva tarea", font=("Segoe UI", 10, "bold")).pack(anchor="w")
@@ -84,9 +95,21 @@ class EvidencePanel:
         ttk.Entry(parent, textvariable=self.title).pack(fill="x", pady=(0, 4))
         line = ttk.Frame(parent)
         line.pack(anchor="w", fill="x")
-        ttk.Label(line, text="Diapositivas:").pack(side="left")
+        kinds = ttk.Combobox(
+            line,
+            textvariable=self.kind_name,
+            state="readonly",
+            width=18,
+            values=[KIND_INFO[k]["name"] for k in KINDS],
+        )
+        kinds.pack(side="left", padx=(0, 10))
+        kinds.bind(
+            "<<ComboboxSelected>>",
+            lambda _e: self.count_label.set(f"{KIND_INFO[self._kind()]['plural'].capitalize()}:"),
+        )
+        ttk.Label(line, textvariable=self.count_label).pack(side="left")
         ttk.Spinbox(line, from_=1, to=100, width=5, textvariable=self.slides).pack(side="left", padx=(4, 10))
-        ttk.Label(line, text="Términos obligatorios (separados por comas):").pack(side="left")
+        ttk.Label(parent, text="Términos obligatorios (separados por comas):").pack(anchor="w", pady=(6, 0))
         ttk.Entry(parent, textvariable=self.terms).pack(fill="x", pady=(4, 4))
         ttk.Button(parent, text="Añadir tarea", command=self._add).pack(anchor="w")
         ttk.Label(parent, textvariable=self.message, foreground="#1a4f8a", wraplength=500).pack(
@@ -119,7 +142,9 @@ class EvidencePanel:
             self.listbox.delete(0, "end")
             for task in self.tasks:
                 terms = f" · {', '.join(task.required_terms)}" if task.required_terms else ""
-                self.listbox.insert("end", f"{task.title} · {task.expected_slides} diapositivas{terms}")
+                self.listbox.insert(
+                    "end", f"{task.title} · {task.expected_slides} {KIND_INFO[task.kind]['plural']}{terms}"
+                )
         recent = self.store.recent_submissions()
         if recent:
             first = recent[0]
@@ -135,6 +160,13 @@ class EvidencePanel:
                 )
             )
 
+    def _kind(self) -> str:
+        """The kind chosen in the form, from its display name."""
+        for kind in KINDS:
+            if KIND_INFO[kind]["name"] == self.kind_name.get():
+                return kind
+        return "pptx"
+
     def _selected_task(self) -> Task | None:
         if self.listbox is None or not self.listbox.curselection():
             return None
@@ -144,7 +176,7 @@ class EvidencePanel:
     # ---- actions ----
     def _add(self) -> None:
         try:
-            self.store.add_task(self.title.get(), int(self.slides.get()), self.terms.get())
+            self.store.add_task(self.title.get(), int(self.slides.get()), self.terms.get(), self._kind())
         except (ValueError, tk.TclError) as err:
             self.message.set(f"No se añadió: {err}")
             return
@@ -167,7 +199,10 @@ class EvidencePanel:
         if task is None:
             self.message.set("Elige primero la tarea que vas a entregar")
             return
-        path = filedialog.askopenfilename(title="Elige tu presentación", filetypes=[("PowerPoint", "*.pptx")])
+        info = KIND_INFO[task.kind]
+        path = filedialog.askopenfilename(
+            title=f"Elige {info['owner_thing']}", filetypes=[(info["name"], info["pattern"])]
+        )
         if not path:
             return
         if self.submit_button is not None:
@@ -177,11 +212,9 @@ class EvidencePanel:
 
     def _check_worker(self, task: Task, path: str) -> None:
         try:
-            result = check_pptx(
-                path, expected_slides=task.expected_slides, required_terms=task.required_terms
-            )
+            result = check_file(task.kind, path, task.expected_slides, task.required_terms)
         except Exception:  # the rubric must never take the app down
-            log.exception("PPTX check crashed")
+            log.exception("File check crashed (%s)", task.kind)
             self._later(lambda: self._finish_failed("No se pudo revisar el archivo. Mira guardian.log"))
             return
         self._later(lambda: self._after_check(task, path, result))

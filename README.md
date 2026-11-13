@@ -16,11 +16,14 @@ desktop agent. The web app and API were removed on purpose: everything here runs
 - 5-question quiz from a local question bank first, Ollama (local, optional) only when you pick it.
 - Unverified questions are always practice and never count as certified.
 - Panel tabs: Hoy, Tareas, Repasos, Progreso, Ajustes. Status uses icon and text, not only color.
-- Deterministic PPTX validator (`guardian/evidence`), not wired to the panel yet.
+- Practical tasks you write by hand (Tareas tab). Hand in a PowerPoint, Markdown or PDF file and a deterministic
+  rubric checks it (Evidencia tab), followed by a short defense about your own file. Safe reading: no macros, no
+  active content, no rendering.
 
 ## What does not exist yet
 
-No app or website blocking, no FocoLocal integration, no installer, no practical-task flow in the panel.
+No app or website blocking, no FocoLocal integration and no installer. A validated task gives no leisure credit,
+because that system does not exist yet. PDF text cannot be read reliably, so a PDF with required terms goes to review.
 See `docs/` for the usage guide, design notes and audits.
 
 ## Run (Windows PowerShell, from the repository root)

@@ -6,7 +6,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Added
 
-- Tareas tab: practical tasks the owner writes by hand (title, slide count, required terms).
+- Markdown and PDF validators (rubrics md-1 and pdf-1) and a kind for each task. The PDF check finds active content also inside compressed streams, with limits against decompression bombs. PDF text cannot be read reliably, so missing terms give needs review and never a rejection.
+- Tareas tab: practical tasks the owner writes by hand (title, slide, section or page count, required terms).
 - Evidencia tab: hand in a .pptx, run the deterministic rubric, and answer a three-question defense about the file. Result: validated, needs review or rejected. It gives no leisure credit, because that system does not exist.
 
 ### Changed

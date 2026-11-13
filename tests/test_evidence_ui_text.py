@@ -19,16 +19,16 @@ class EvidenceTextTests(unittest.TestCase):
         )
         self.assertEqual(check_line("unknown_check", True, ""), "✔ unknown_check")
 
-    def test_labels_cover_every_check_the_rubric_can_emit(self):
+    def test_labels_cover_every_check_every_rubric_can_emit(self):
         import re
         from pathlib import Path
 
-        source = (Path(__file__).parent.parent / "src" / "guardian" / "evidence" / "pptx_check.py").read_text(
-            encoding="utf-8"
-        )
-        emitted = set(re.findall(r'(?:Check|_fail)\(\s*"(\w+)"', source))
-        self.assertTrue(emitted)
-        self.assertLessEqual(emitted, set(CHECK_LABELS), emitted - set(CHECK_LABELS))
+        folder = Path(__file__).parent.parent / "src" / "guardian" / "evidence"
+        for name in ("pptx_check.py", "md_check.py", "pdf_check.py"):
+            source = (folder / name).read_text(encoding="utf-8")
+            emitted = set(re.findall(r'(?:Check|_fail)\(\s*"(\w+)"', source))
+            self.assertTrue(emitted, name)
+            self.assertLessEqual(emitted, set(CHECK_LABELS), (name, emitted - set(CHECK_LABELS)))
 
 
 if __name__ == "__main__":

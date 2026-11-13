@@ -27,7 +27,9 @@ class SessionStoreTests(unittest.TestCase):
         self.assertEqual(self.store.load(NOW), INACTIVE)
         self.path.parent.mkdir(parents=True)
         self.path.write_text("{not json", encoding="utf-8")
-        self.assertEqual(self.store.load(NOW), INACTIVE)
+        with self.assertLogs("guardian.session_state", level="WARNING") as captured:
+            self.assertEqual(self.store.load(NOW), INACTIVE)
+        self.assertIn("unreadable session file", captured.output[0])
 
     def test_expired_clears_file(self):
         self.store.save(SessionState(True, NOW - timedelta(seconds=1)))

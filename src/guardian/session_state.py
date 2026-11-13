@@ -8,6 +8,7 @@ itself has ended or expired, so a reboot never loses an unanswered exam.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import tempfile
 from dataclasses import dataclass
@@ -15,6 +16,7 @@ from datetime import datetime
 from pathlib import Path
 
 SCHEMA_VERSION = 1
+log = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -68,8 +70,8 @@ class SessionStore:
     def clear(self) -> None:
         try:
             self.path.unlink()
-        except OSError:
-            pass
+        except OSError as err:
+            log.warning("Could not remove %s: %s", self.path.name, err)
 
     def load(self, now: datetime) -> SessionState:
         """Never raises. Bad or foreign data gives INACTIVE; an expired session keeps pending/windows."""
@@ -88,7 +90,10 @@ class SessionStore:
             windows = _parse_windows(data.get("windows", []))
             until = _parse(data.get("until"))
             paused = _parse(data.get("paused_until"))
-        except (OSError, ValueError, KeyError, TypeError, AttributeError):
+        except FileNotFoundError:
+            return INACTIVE
+        except (OSError, ValueError, KeyError, TypeError, AttributeError) as err:
+            log.warning("Ignoring unreadable session file (%s): %s", type(err).__name__, err)
             return INACTIVE
         if active and (until is None or until <= now):
             active, until, paused = False, None, None  # expired: nothing resumes by itself

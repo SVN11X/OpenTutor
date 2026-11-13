@@ -8,9 +8,12 @@ keeps working while the Tk panel is hidden. Menu clicks are delivered to
 
 from __future__ import annotations
 
+import logging
 import sys
 import threading
 from collections.abc import Callable
+
+log = logging.getLogger(__name__)
 
 # (command, label). The order is the menu order. "emergency" is always visible.
 MENU_ITEMS: tuple[tuple[str, str], ...] = (
@@ -216,4 +219,4 @@ class TrayIcon:
         try:
             self._on_command(command)
         except Exception:  # a UI handler error must never kill the tray thread
-            pass
+            log.exception("Tray command %r failed", command)

@@ -7,11 +7,14 @@ Educators should review a generated bank before using results for high-stakes un
 from __future__ import annotations
 
 import json
+import logging
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from .core import Question, validate_questions
 from .fieldnotes import reviewed_questions
+
+log = logging.getLogger(__name__)
 
 # Validated, manually authored fallback for one known topic only. No fake
 # auto-grading of arbitrary subjects when Ollama is unavailable.
@@ -188,7 +191,10 @@ def get_questions(
         if any(q.prompt.strip().casefold() in recent for q in questions):
             raise ValueError("Preguntas ya utilizadas")
         return questions, "ollama-unreviewed"
-    except (URLError, HTTPError, OSError, ValueError, KeyError, TypeError, json.JSONDecodeError):
+    except (URLError, HTTPError, OSError, ValueError, KeyError, TypeError, json.JSONDecodeError) as err:
+        log.warning(
+            "Ollama gave no usable questions (%s); falling back to the reviewed bank", type(err).__name__
+        )
         if not gcp:
             raise RuntimeError(
                 "Ollama no respondió con preguntas válidas para este tema; no hay banco revisado"

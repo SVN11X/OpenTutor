@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import ctypes
+import logging
 import os
 import queue
 import sys
@@ -17,6 +18,7 @@ from tkinter import messagebox, ttk
 
 from . import autostart, fieldnotes, integrations
 from .core import ResultStore, SurpriseClock, attempt_label, within_study_window
+from .logging_setup import setup_logging
 from .questions import get_questions
 from .results_ui import show_exam_result
 from .session_state import SessionState, SessionStore, parse_schedule
@@ -46,9 +48,7 @@ class GuardianUI:
         self.root.title("OpenTutor Guardian — v0.2")
         self.root.geometry("560x600")
         self.root.minsize(520, 560)
-        app_data = (
-            Path(os.environ.get("LOCALAPPDATA", str(Path.home() / ".local" / "share"))) / "OpenTutorGuardian"
-        )
+        app_data = _app_data()
         self.store = ResultStore(app_data / "guardian_mvp.sqlite3")
         self.clock = SurpriseClock(interval=(20, 30) if demo else (600, 1500))
         self.session_store = SessionStore(app_data / "session.json")
@@ -313,8 +313,8 @@ class GuardianUI:
                 )
                 self.root.after(0, lambda: self.health.set(text))
                 self.root.after(30000, self._refresh_health)
-            except (tk.TclError, RuntimeError):
-                pass  # window closed while probing
+            except (tk.TclError, RuntimeError) as err:
+                log.debug("Health refresh skipped: %s", err)  # window closed while probing
 
         threading.Thread(target=work, daemon=True).start()
 
@@ -572,8 +572,16 @@ def _no_activate(window: tk.Toplevel) -> None:
         hwnd = user32.GetParent(window.winfo_id()) or window.winfo_id()
         style = user32.GetWindowLongPtrW(hwnd, -20)  # GWL_EXSTYLE
         user32.SetWindowLongPtrW(hwnd, -20, style | 0x08000000)
-    except (OSError, tk.TclError, AttributeError):
-        pass  # cosmetic hardening only
+    except (OSError, tk.TclError, AttributeError) as err:
+        log.debug("WS_EX_NOACTIVATE not applied: %s", err)  # cosmetic hardening only
+
+
+log = logging.getLogger(__name__)
+
+
+def _app_data() -> Path:
+    base = Path(os.environ.get("LOCALAPPDATA", str(Path.home() / ".local" / "share")))
+    return base / "OpenTutorGuardian"
 
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -589,6 +597,7 @@ def main() -> None:
     parser.add_argument("--demo", action="store_true", help="Avisos cada 20–30 s elegibles para probar la UI")
     parser.add_argument("--hidden", action="store_true", help="Arranca con el panel oculto en la bandeja")
     args = parser.parse_args()
+    setup_logging(_app_data())
     lock = SingleInstance("OpenTutorGuardian")
     if not lock.acquire():
         print("Guardian ya está en ejecución: busca su icono en la bandeja del sistema.")

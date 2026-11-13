@@ -4,6 +4,15 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+
+- Tareas tab: practical tasks the owner writes by hand (title, slide count, required terms).
+- Evidencia tab: hand in a .pptx, run the deterministic rubric, and answer a three-question defense about the file. Result: validated, needs review or rejected. It gives no leisure credit, because that system does not exist.
+
+### Changed
+
+- The study session, schedule and pending quiz moved from session.json to the SQLite file. An old session.json is imported once and renamed to session.json.migrated.
+
 ## [0.2.0] - 2026-11-13
 
 ### Added

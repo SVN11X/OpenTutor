@@ -27,7 +27,7 @@ Order: structure, standard files, security, build and tests, docs, then product.
 
 ## Product (after the standard)
 
-- [ ] BLOCKED: where should practical tasks come from now that the OpenTutor planner was removed (manual list, a local JSON file, or FocoLocal)? Needed before the evidence tab.
-- [ ] BLOCKED: results already live in SQLite. Keep session.json or move only the session to SQLite as the v0.2.0 spec asks? Record the decision in docs/decisions/.
-- [ ] BLOCKED: create the own repository OpenTutor-Guardian with the full history and detach from the fork. Needs the owner's explicit order.
-- [ ] BLOCKED: wire the PPTX validator to a panel tab named Evidencia with the three-question defense. Depends on the task source decision above.
+- [x] DECIDED (manual list, see docs/decisions/0004): where should practical tasks come from now that the OpenTutor planner was removed (manual list, a local JSON file, or FocoLocal)? Needed before the evidence tab.
+- [x] DECIDED (SQLite, see docs/decisions/0003): results already live in SQLite. Keep session.json or move only the session to SQLite as the v0.2.0 spec asks? Record the decision in docs/decisions/.
+- [x] SKIPPED: owner chose to keep the fork for now. Create the own repository OpenTutor-Guardian with the full history and detach from the fork. Needs the owner's explicit order.
+- [x] Wire the PPTX validator to a panel tab named Evidencia with the three-question defense. Depends on the task source decision above.

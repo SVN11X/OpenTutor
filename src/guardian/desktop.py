@@ -18,11 +18,13 @@ from tkinter import messagebox, ttk
 
 from . import autostart, fieldnotes, integrations
 from .core import ResultStore, SurpriseClock, attempt_label, within_study_window
+from .evidence_ui import EvidencePanel
 from .logging_setup import setup_logging
 from .questions import get_questions
 from .results_ui import show_exam_result
 from .session_state import SessionState, SessionStore, parse_schedule
 from .single_instance import SingleInstance
+from .task_store import TaskStore
 from .tray import TrayIcon
 
 
@@ -46,8 +48,8 @@ class GuardianUI:
     def __init__(self, root: tk.Tk, *, demo: bool = False) -> None:
         self.root = root
         self.root.title("OpenTutor Guardian — v0.2")
-        self.root.geometry("560x600")
-        self.root.minsize(520, 560)
+        self.root.geometry("600x700")
+        self.root.minsize(560, 640)
         app_data = _app_data()
         self.store = ResultStore(app_data / "guardian_mvp.sqlite3")
         self.clock = SurpriseClock(interval=(20, 30) if demo else (600, 1500))
@@ -77,6 +79,8 @@ class GuardianUI:
         self.health = tk.StringVar(value="Comprobando servicios…")
         autostart.refresh_if_stale(_REPO_ROOT)  # migrate a pre-rename Run value, never creates one
         self.autostart_var = tk.BooleanVar(value=autostart.is_enabled())
+        self.task_store = TaskStore(app_data / "guardian_mvp.sqlite3")
+        self.evidence_panel = EvidencePanel(root, self.task_store, self.status.set)
         self._render()
         self._refresh_stats()
         self._restore_session()
@@ -100,10 +104,13 @@ class GuardianUI:
         )
         self.tabs = ttk.Notebook(frame)
         self.tabs.pack(fill="both", expand=True)
-        today, tasks, reviews, progress, settings = (ttk.Frame(self.tabs, padding=12) for _ in range(5))
+        today, tasks, evidence, reviews, progress, settings = (
+            ttk.Frame(self.tabs, padding=12) for _ in range(6)
+        )
         for page, name in (
             (today, "Hoy"),
             (tasks, "Tareas"),
+            (evidence, "Evidencia"),
             (reviews, "Repasos"),
             (progress, "Progreso"),
             (settings, "Ajustes"),
@@ -140,17 +147,9 @@ class GuardianUI:
         ttk.Button(row, text="Ocultar a bandeja", command=self._hide).pack(side="left", padx=(0, 7))
         ttk.Button(row, text="Salir", command=self._exit).pack(side="left")
 
-        # Tareas: honest empty state, nothing simulated
-        ttk.Label(tasks, text="◌ Sin tareas", font=("Segoe UI", 11, "bold")).pack(anchor="w")
-        ttk.Label(
-            tasks,
-            wraplength=500,
-            justify="left",
-            text=(
-                "Las tareas prácticas (por ejemplo una presentación de 5 diapositivas) llegan en la "
-                "Entrega B. Hoy solo existe el examen de 5 preguntas."
-            ),
-        ).pack(anchor="w", pady=6)
+        # Tareas and Evidencia: written by the owner, checked by a deterministic rubric
+        self.evidence_panel.build_tasks_tab(tasks)
+        self.evidence_panel.build_evidence_tab(evidence)
 
         # Repasos: pending exam and recent results
         ttk.Label(reviews, textvariable=self.pending_text, font=("Segoe UI", 10, "bold")).pack(anchor="w")

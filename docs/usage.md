@@ -100,7 +100,7 @@ Run from the repository root in Windows PowerShell:
 - Tray menu: Abrir panel, Iniciar sesión, Pausar, Terminar, Emergencia, Salir.
 - Closing the window hides it to the tray. If the tray icon could not be created, closing exits.
 - One instance per user session. A second launch prints a notice and exits.
-- A started session survives a restart (`%LOCALAPPDATA%\OpenTutorGuardian\session.json`) until it expires, Terminar or Emergencia.
+- A started session survives a restart (SQLite, en `%LOCALAPPDATA%\OpenTutorGuardian\guardian_mvp.sqlite3`) until it expires, Terminar or Emergencia.
 - No autostart, no blocking, no network. Unverified questions are practice only.
 - Design: `decisions/0002-resident-agent.md`.
 - Panel tabs: Hoy (state, next review, services, emergency), Tareas (empty state until delivery B),

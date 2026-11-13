@@ -17,7 +17,7 @@ add paid services, telemetry or hidden control.
   Rejected: `pystray` (LGPLv3, not installed, needs Pillow glue); a Windows
   service (Session 0 cannot draw UI in the user session).
 - Single instance with a named mutex `Local\OpenTutorGuardian` (`single_instance.py`).
-- Sessions persist in `%LOCALAPPDATA%\OpenTutorGuardian\session.json`
+- Sessions persist in `%LOCALAPPDATA%\OpenTutorGuardian\session.json` (moved to SQLite, see 0003)
   (`session_state.py`). Only: active, until, paused_until, topic, source.
   Expired or corrupt state is discarded. Nothing starts without a prior explicit start.
 - No autostart in v0.2.0. `--hidden` exists for a future user-chosen shortcut.
@@ -32,9 +32,7 @@ add paid services, telemetry or hidden control.
 - Unverified question sources keep giving practice only, never unlock credit.
 
 ## Deviations from the v0.2.0 spec (2026-11-13)
-- Session, schedule and pending quiz live in `session.json`, not SQLite. The spec asks for
-  SQLite with migrations. JSON is atomic and versioned (`schema_version`) and enough for one
-  small record, but the spec item stays open until the state machine needs history.
+- Session, schedule and pending quiz lived in `session.json`, not SQLite. Resolved by decision 0003: they now live in SQLite.
 - Autostart is an HKCU Run value (`autostart.py`), off by default, toggled by a checkbox.
 - FocoLocal health is always `unavailable`: no IPC exists yet.
 - The surprise popup uses WS_EX_NOACTIVATE so it does not take keyboard focus.

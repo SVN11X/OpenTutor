@@ -24,7 +24,10 @@ Status: draft.
 - `src/guardian/autostart.py`: opt-in, reversible autostart in the current user registry.
 - `src/guardian/fieldnotes.py` and `src/guardian/questions.py`: the question sources.
 - `src/guardian/integrations.py`: honest health of Ollama and FocoLocal.
-- `src/guardian/evidence/pptx_check.py`: the deterministic PPTX rubric, not wired to the panel yet.
+- `src/guardian/evidence/pptx_check.py`: the deterministic PPTX rubric, safe ZIP reading and no macros.
+- `src/guardian/evidence/defense.py`: three questions about the owner's own file, with decoys that never appear in it.
+- `src/guardian/task_store.py`: hand-written tasks and the evidence handed in, in SQLite.
+- `src/guardian/evidence_ui.py`: the Tareas and Evidencia tabs.
 
 ## Where to start reading
 

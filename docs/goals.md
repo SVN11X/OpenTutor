@@ -15,7 +15,7 @@ The owner, a single user on a personal Windows 10 or 11 account, studying Google
 - A resident agent in the Windows user session with a tray icon, a hideable panel and one instance.
 - Opt-in study sessions and schedules that survive a restart, with a surprise quiz of five questions after 10 to 25 minutes of eligible activity.
 - Instant local questions first (Fieldnotes bank), local Ollama only when chosen, so the panel never waits for a model.
-- Later: deterministic validation of practical work (PPTX, PDF, Markdown) and, with FocoLocal, temporary leisure restrictions.
+- Practical tasks written by hand, a deterministic PPTX check and a three-question defense about the owner's own file. Later: PDF and Markdown, and, with FocoLocal, temporary leisure restrictions.
 
 ## Non-goals
 

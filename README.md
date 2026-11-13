@@ -36,7 +36,7 @@ optional local Ollama at `127.0.0.1:11434`. No telemetry.
 
 ## Privacy and safety
 
-Data stays in `%LOCALAPPDATA%\OpenTutorGuardian` (SQLite results and `session.json`). Guardian does
+Data stays in `%LOCALAPPDATA%\OpenTutorGuardian` (one SQLite file with results, session, tasks and evidence). Guardian does
 not watch keys, screen, audio or window titles. The emergency button and Exit are always visible.
 
 ## License

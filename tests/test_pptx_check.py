@@ -13,11 +13,15 @@ NS = (
 
 
 def slide_xml(title: str, body: str, titled: bool = True) -> str:
+    """A real-looking slide: the title shape holds only the title, the body is another shape."""
     ph = '<p:nvPr><p:ph type="title"/></p:nvPr>' if titled else "<p:nvPr/>"
     return (
-        f'<p:sld {NS}><p:cSld><p:spTree><p:sp><p:nvSpPr><p:cNvPr id="1" name="t"/><p:cNvSpPr/>{ph}</p:nvSpPr>'
-        f"<p:txBody><a:p><a:r><a:t>{title}</a:t></a:r></a:p><a:p><a:r><a:t>{body}</a:t></a:r></a:p></p:txBody>"
-        f"</p:sp></p:spTree></p:cSld></p:sld>"
+        f"<p:sld {NS}><p:cSld><p:spTree>"
+        f'<p:sp><p:nvSpPr><p:cNvPr id="1" name="t"/><p:cNvSpPr/>{ph}</p:nvSpPr>'
+        f"<p:txBody><a:p><a:r><a:t>{title}</a:t></a:r></a:p></p:txBody></p:sp>"
+        f'<p:sp><p:nvSpPr><p:cNvPr id="2" name="b"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>'
+        f"<p:txBody><a:p><a:r><a:t>{body}</a:t></a:r></a:p></p:txBody></p:sp>"
+        f"</p:spTree></p:cSld></p:sld>"
     )
 
 

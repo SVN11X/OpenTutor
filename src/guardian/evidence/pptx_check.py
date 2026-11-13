@@ -37,6 +37,17 @@ class Result:
     rubric_version: str = RUBRIC_VERSION
     assessment_source: str = "deterministic-rubric"
     credit_eligible: bool = False
+    # Read-only facts about the deck, used to build the defense questions. Empty when the rubric failed early.
+    titles: tuple[str, ...] = ()
+    vocabulary: tuple[str, ...] = ()
+    full_text: str = ""
+
+
+def _slide_title(root: ET.Element) -> str:
+    for shape in root.iter(f"{_P}sp"):
+        if any(ph.get("type") in ("title", "ctrTitle") for ph in shape.iter(f"{_P}ph")):
+            return " ".join(t.text or "" for t in shape.iter(f"{_A}t")).strip()
+    return ""
 
 
 def _fail(name: str, detail: str) -> Result:
@@ -70,12 +81,14 @@ def check_pptx(
             return _fail("slides", "No se encontraron diapositivas")
         checks: list[Check] = [Check("archive", True), Check("macros", True, "sin macros")]
         texts: list[str] = []
+        titles: list[str] = []
         titled, placeholder_hits, empty = 0, [], []
         try:
             for n in numbers:
                 root = _parse(zf.read(f"ppt/slides/slide{n}.xml"))
                 text = " ".join(t.text or "" for t in root.iter(f"{_A}t")).strip()
                 texts.append(text)
+                titles.append(_slide_title(root))
                 if not text:
                     empty.append(n)
                 if any(p in text.lower() for p in _PLACEHOLDERS):
@@ -114,4 +127,7 @@ def check_pptx(
         status = "needs_review"
     else:
         status = "passed"
-    return Result(status, tuple(checks))
+    words = sorted({w.casefold() for w in re.findall(r"\w{4,}", blob)})[:500]
+    return Result(
+        status, tuple(checks), titles=tuple(titles), vocabulary=tuple(words), full_text=blob[:200_000]
+    )

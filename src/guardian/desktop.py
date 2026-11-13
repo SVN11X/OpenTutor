@@ -51,7 +51,9 @@ class GuardianUI:
         app_data = _app_data()
         self.store = ResultStore(app_data / "guardian_mvp.sqlite3")
         self.clock = SurpriseClock(interval=(20, 30) if demo else (600, 1500))
-        self.session_store = SessionStore(app_data / "session.json")
+        self.session_store = SessionStore(
+            app_data / "guardian_mvp.sqlite3", legacy_json=app_data / "session.json"
+        )
         self.enabled = False  # opt-in: a session starts only if the user started it before
         self.pause_until = _EPOCH
         self.in_quiz = False
@@ -285,7 +287,7 @@ class GuardianUI:
         self._stop()
         self.windows = ()
         self.schedule.set("")
-        self._persist()  # nothing left to keep: removes session.json
+        self._persist()  # nothing left to keep: removes the saved row
         if self.surprise_popup is not None and self.surprise_popup.winfo_exists():
             self.surprise_popup.destroy()
         self.surprise_popup = None

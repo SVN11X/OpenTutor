@@ -85,8 +85,8 @@ El archivo SQLite se guarda en
 
 ## Desarrollo posterior
 
-Leer [`docs/CONTRACTS.md`](docs/CONTRACTS.md) y
-[`docs/ACCEPTANCE.md`](docs/ACCEPTANCE.md) antes de modificar FocoLocal.
+Leer [`contracts.md`](contracts.md) y
+[`acceptance.md`](acceptance.md) antes de modificar FocoLocal.
 Seguir `SVN11X/standards`: PRs pequeños, no repetir pruebas sin cambio de huella,
 no commits/push/merge no autorizados.
 
@@ -102,7 +102,7 @@ Run from the repository root in Windows PowerShell:
 - One instance per user session. A second launch prints a notice and exits.
 - A started session survives a restart (`%LOCALAPPDATA%\OpenTutorGuardian\session.json`) until it expires, Terminar or Emergencia.
 - No autostart, no blocking, no network. Unverified questions are practice only.
-- Design: `docs/ADR-0001-resident-agent.md`.
+- Design: `decisions/0002-resident-agent.md`.
 - Panel tabs: Hoy (state, next review, services, emergency), Tareas (empty state until delivery B),
   Repasos (pending exam and recent results), Progreso, Ajustes (topic, source, schedule, autostart).
   Every status uses icon + text. Unverified sources show as "◐ Práctica".

@@ -1,6 +1,9 @@
-# ADR-0001: Resident agent mechanism (v0.2.0, delivery A)
+# 0002. Resident agent mechanism (v0.2.0, delivery A)
 
-Status: accepted for v0.2.0. Date: 2026-11-13.
+- Status: accepted
+- Date: 2026-11-13
+- Proposed by: Claude Code
+- Accepted by: owner
 
 ## Context
 Guardian v0.1.x is a tkinter window the user must keep open. v0.2.0 needs a
@@ -21,7 +24,7 @@ add paid services, telemetry or hidden control.
 - Close button hides the panel only when the tray icon was created, otherwise it
   exits, so there is never an invisible agent. Emergency and Exit are in both the
   tray menu and the panel.
-- Leisure blocking and FocoLocal leases are NOT implemented (see CONTRACTS.md).
+- Leisure blocking and FocoLocal leases are NOT implemented (see docs/contracts.md).
 
 ## Consequences
 - Tray menu clicks arrive on the tray thread and cross to Tk through a queue.

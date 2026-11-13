@@ -26,7 +26,7 @@ The owner, a single user on a personal Windows 10 or 11 account, studying Google
 
 ## Success criteria
 
-- The acceptance list of delivery A in `docs/specs/` passes on a real Windows machine, including 125 and 150 percent scaling and two monitors.
+- The acceptance list of delivery A in `docs/acceptance.md` passes on a real Windows machine, including 125 and 150 percent scaling and two monitors.
 - The unit tests pass in CI on `windows-latest` and locally.
 - With Ollama stopped, the panel still opens and a quiz loads from the local bank.
 - The emergency exit and Exit are always visible and work.

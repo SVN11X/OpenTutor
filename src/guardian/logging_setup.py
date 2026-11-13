@@ -16,7 +16,8 @@ def setup_logging(app_data: Path) -> Path:
     logger = logging.getLogger("guardian")
     logger.setLevel(logging.INFO)
     if not any(
-        isinstance(h, RotatingFileHandler) and h.baseFilename == str(path.resolve()) for h in logger.handlers
+        isinstance(h, RotatingFileHandler) and Path(h.baseFilename).resolve() == path.resolve()
+        for h in logger.handlers
     ):
         handler = RotatingFileHandler(path, maxBytes=256 * 1024, backupCount=2, encoding="utf-8")
         handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))

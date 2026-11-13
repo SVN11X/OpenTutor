@@ -124,8 +124,7 @@ class GuardianUI:
         ttk.Label(tasks, text="◌ Sin tareas", font=("Segoe UI", 11, "bold")).pack(anchor="w")
         ttk.Label(tasks, wraplength=500, justify="left", text=(
             "Las tareas prácticas (por ejemplo una presentación de 5 diapositivas) llegan en la "
-            "Entrega B. Hoy solo existe el examen de 5 preguntas. El planificador de OpenTutor "
-            "todavía no está conectado.")).pack(anchor="w", pady=6)
+            "Entrega B. Hoy solo existe el examen de 5 preguntas.")).pack(anchor="w", pady=6)
 
         # Repasos: pending exam and recent results
         ttk.Label(reviews, textvariable=self.pending_text, font=("Segoe UI", 10, "bold")).pack(anchor="w")

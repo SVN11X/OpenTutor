@@ -10,7 +10,6 @@ import urllib.error
 import urllib.request
 
 OLLAMA_URL = "http://127.0.0.1:11434/api/tags"
-OPENTUTOR_URL = "http://127.0.0.1:8000/api/health/live"
 
 LABELS = {
     "ok": ("●", "OK"),
@@ -46,6 +45,5 @@ def check_all(*, bank_ok: bool) -> list[Health]:
     return [
         Health("Preguntas locales", "ok" if bank_ok else "degraded"),
         probe_http("Ollama", OLLAMA_URL),
-        probe_http("OpenTutor", OPENTUTOR_URL),
         Health("FocoLocal", "unavailable"),
     ]

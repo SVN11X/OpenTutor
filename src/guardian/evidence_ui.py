@@ -19,6 +19,7 @@ from .evidence.defense import build_defense
 from .evidence.pptx_check import Result
 from .i18n import t
 from .task_store import FAILED, NEEDS_REVIEW, PENDING_DEFENSE, VALIDATED, Task, TaskStore
+from .widgets import scrolled
 
 log = logging.getLogger(__name__)
 
@@ -87,17 +88,18 @@ class EvidencePanel:
 
     # ---- tabs ----
     def build_tasks_tab(self, parent: ttk.Frame) -> None:
+        _canvas, parent = scrolled(parent)
         ttk.Label(parent, text=t("evidence.tasks_heading"), font=("Segoe UI", 11, "bold")).pack(anchor="w")
-        self.listbox = tk.Listbox(parent, height=5, exportselection=False)
+        self.listbox = tk.Listbox(parent, height=4, exportselection=False)
         self.listbox.pack(fill="x", pady=(4, 4))
         row = ttk.Frame(parent)
         row.pack(anchor="w", pady=(0, 8))
         self.submit_button = ttk.Button(row, text=t("evidence.hand_in"), command=self._submit)
-        self.submit_button.pack(side="left", padx=(0, 7))
+        self.submit_button.pack(side="left", padx=(0, 8))
         ttk.Button(row, text=t("evidence.archive"), command=self._archive).pack(side="left")
         ttk.Label(parent, text=t("evidence.new_task"), font=("Segoe UI", 10, "bold")).pack(anchor="w")
         ttk.Label(parent, text=t("evidence.title_label")).pack(anchor="w")
-        ttk.Entry(parent, textvariable=self.title).pack(fill="x", pady=(0, 4))
+        ttk.Entry(parent, textvariable=self.title).pack(fill="x", pady=(0, 8))
         line = ttk.Frame(parent)
         line.pack(anchor="w", fill="x")
         kinds = ttk.Combobox(
@@ -117,7 +119,7 @@ class EvidencePanel:
         ttk.Label(line, textvariable=self.count_label).pack(side="left")
         ttk.Spinbox(line, from_=1, to=100, width=5, textvariable=self.slides).pack(side="left", padx=(4, 10))
         ttk.Label(parent, text=t("evidence.terms_label")).pack(anchor="w", pady=(6, 0))
-        ttk.Entry(parent, textvariable=self.terms).pack(fill="x", pady=(4, 4))
+        ttk.Entry(parent, textvariable=self.terms).pack(fill="x", pady=(4, 8))
         ttk.Button(parent, text=t("evidence.add_task"), command=self._add).pack(anchor="w")
         ttk.Label(parent, textvariable=self.message, foreground="#1a4f8a", wraplength=500).pack(
             anchor="w", pady=6

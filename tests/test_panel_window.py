@@ -122,6 +122,13 @@ class PanelTests(unittest.TestCase):
         self.assertIn("No se guardó", self.ui.settings_status.get())
         self.assertEqual(self.ui.windows, ())
 
+    def test_tareas_keeps_its_controls_inside_a_scrolled_canvas(self):
+        button = next(b for b in widgets(self.root, ttk.Button) if b.cget("text") == "Añadir tarea")
+        ancestor = button.master
+        while ancestor is not None and not isinstance(ancestor, tk.Canvas):
+            ancestor = ancestor.master
+        self.assertIsInstance(ancestor, tk.Canvas)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,8 +1,8 @@
 # Guardian and FocoLocal talking to each other: implementation plan
 
-- Status: proposed
+- Status: rejected by decision 0010. Kept as history: Guardian and FocoLocal stay independent.
 - Date: 2026-11-16
-- Proposed by: Claude Code. Needs the owner's approval before any code.
+- Proposed by: Claude Code.
 
 ## Goal
 

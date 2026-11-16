@@ -4,6 +4,10 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Changed
+
+- Guardian and FocoLocal are independent apps (decision 0010). The panel no longer lists FocoLocal among its services, and the plan to connect them is archived.
+
 ### Added
 
 - `docs/gallery/`: screenshots of 16 states of the panel and the quiz windows, shown by GitHub. `scripts/gallery.py` regenerates them with throwaway data and a sample bank, capturing only Guardian's own windows, the same on every run. A `gallery` workflow builds it for every pull request.

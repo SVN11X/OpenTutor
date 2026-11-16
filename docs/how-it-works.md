@@ -29,7 +29,7 @@
 - `src/guardian/settings_store.py` and `src/guardian/settings_ui.py`: the saved settings and the "Qué te pregunto" section of Ajustes, which saves itself after each change.
 - `src/guardian/autostart.py`: opt-in, reversible autostart in the current user registry.
 - `src/guardian/fieldnotes.py` and `src/guardian/questions.py`: the question sources.
-- `src/guardian/integrations.py`: honest health of Ollama and FocoLocal.
+- `src/guardian/integrations.py`: honest health of the local bank and Ollama.
 - `src/guardian/evidence/pptx_check.py`: the deterministic PPTX rubric, safe ZIP reading and no macros.
 - `src/guardian/evidence/md_check.py`: the Markdown rubric (sections, empty sections, placeholders, duplicates).
 - `src/guardian/evidence/pdf_check.py`: the PDF rubric (structure, active content, page count, bomb limits).
@@ -48,4 +48,4 @@ Run: `.\scripts\run-dev.ps1`. Check: `.\scripts\run-dev.ps1 -TestsOnly`.
 
 ## Not covered
 
-No blocking of apps or sites, no FocoLocal link, no signed installer, no leisure credit, and no real-device check of high DPI, two monitors or suspension yet.
+No blocking of apps or sites, no link with FocoLocal (decision 0010), no signed installer, no leisure credit, and no real-device check of high DPI, two monitors or suspension yet.

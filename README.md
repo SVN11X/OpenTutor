@@ -39,8 +39,8 @@ desktop agent. The web app and API were removed on purpose: everything here runs
 
 ## What does not exist yet
 
-No app or website blocking. The installer is not signed yet, so Windows warns about an unknown publisher. No link with FocoLocal, the author's
-separate site limiter, so a validated task gives no leisure credit, meaning no permission for free time. PDF text cannot be read reliably, so a PDF with required terms goes to review.
+No app or website blocking. The installer is not signed yet, so Windows warns about an unknown publisher. Guardian and FocoLocal, the author's
+separate site limiter, are independent apps (decision 0010), so a validated task gives no leisure credit, meaning no permission for free time. PDF text cannot be read reliably, so a PDF with required terms goes to review.
 See `docs/` for the usage guide, design notes and audits.
 
 ## Run (Windows PowerShell, from the repository root)

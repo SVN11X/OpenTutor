@@ -1,5 +1,7 @@
 # FocoLocal audit and adapter design (read-only, 2026-11-13)
 
+Archived by decision 0010: Guardian and FocoLocal stay independent. Kept as history.
+
 Repo: `C:\my_drive\Portafolio\foco_Local_desktop`, branch `main`, clean tree, MIT, Go 1.23,
 23 Go files. Nothing in that repo was changed.
 

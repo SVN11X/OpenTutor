@@ -70,7 +70,7 @@ OpenTutor Guardian 0.5.0. The panel is in Spanish, this guide is in English. Des
 
 ## Known limits
 
-- No app or site blocking, no FocoLocal link.
+- No app or site blocking. Guardian and FocoLocal are independent apps (decision 0010).
 - Windows Do Not Disturb and video calls in a normal window are not detected.
 - Bank questions appear in the language of the bank, mostly English.
 - High DPI at 150 percent, two monitors and real suspend and lock still need a check on the owner's machine.

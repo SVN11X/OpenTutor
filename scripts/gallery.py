@@ -249,7 +249,6 @@ def run(out: Path, bank: Path | None) -> list[tuple[str, str, str]]:
             states = [
                 integrations.Health("Preguntas locales", "ok" if self.bank_found else "degraded"),
                 integrations.Health("Ollama", "disconnected"),
-                integrations.Health("FocoLocal", "unavailable"),
             ]
             self.health.set("  ·  ".join(h.text() for h in states))
 

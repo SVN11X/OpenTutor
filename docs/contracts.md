@@ -1,5 +1,7 @@
 # Contratos futuros. Guardian ⇆ OpenTutor ⇆ FocoLocal
 
+**Nota (2026-11-16):** las partes sobre FocoLocal quedan fuera de alcance por la decisión 0010. Guardian y FocoLocal son aplicaciones independientes.
+
 **Estado:** diseño, NO implementado. No inventar endpoints que los repositorios
 no exponen. Auditar el código real antes de codificar adaptadores.
 

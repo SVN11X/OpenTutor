@@ -1,7 +1,7 @@
 """Honest health of the services Guardian can use. Local probes only, no telemetry.
 
 States: ok, degraded, incompatible, disconnected, unavailable.
-FocoLocal has no IPC yet (see docs/contracts.md), so it reports ``unavailable``.
+FocoLocal is not listed: Guardian and FocoLocal are independent apps (decision 0010).
 """
 
 from __future__ import annotations
@@ -46,5 +46,4 @@ def check_all(*, bank_ok: bool) -> list[Health]:
     return [
         Health("Preguntas locales", "ok" if bank_ok else "degraded"),
         probe_http("Ollama", OLLAMA_URL),
-        Health("FocoLocal", "unavailable"),
     ]

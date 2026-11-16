@@ -26,6 +26,25 @@ MENU_ITEMS: tuple[tuple[str, str], ...] = (
 )
 _FIRST_ID = 1000
 
+WM_POWERBROADCAST, WM_WTSSESSION_CHANGE = 0x0218, 0x02B1
+_PBT_APMSUSPEND, _PBT_APMRESUMESUSPEND, _PBT_APMRESUMEAUTOMATIC = 0x0004, 0x0007, 0x0012
+_WTS_SESSION_LOCK, _WTS_SESSION_UNLOCK = 0x7, 0x8
+
+
+def system_event(msg: int, wparam: int) -> str | None:
+    """Translate a Windows power or session message into 'suspend', 'resume', 'lock' or 'unlock'."""
+    if msg == WM_POWERBROADCAST:
+        if wparam == _PBT_APMSUSPEND:
+            return "suspend"
+        if wparam in (_PBT_APMRESUMESUSPEND, _PBT_APMRESUMEAUTOMATIC):
+            return "resume"
+    elif msg == WM_WTSSESSION_CHANGE:
+        if wparam == _WTS_SESSION_LOCK:
+            return "lock"
+        if wparam == _WTS_SESSION_UNLOCK:
+            return "unlock"
+    return None
+
 
 class TrayIcon:
     """Tray icon. ``start()`` returns False when the platform has no tray."""
@@ -60,6 +79,10 @@ class TrayIcon:
         from ctypes import wintypes
 
         user32, shell32, kernel32 = ctypes.windll.user32, ctypes.windll.shell32, ctypes.windll.kernel32
+        wtsapi32 = ctypes.windll.wtsapi32
+        wtsapi32.WTSRegisterSessionNotification.argtypes = [wintypes.HWND, wintypes.DWORD]
+        wtsapi32.WTSUnRegisterSessionNotification.argtypes = [wintypes.HWND]
+        session_events = False
         LRESULT = ctypes.c_ssize_t
         WNDPROC = ctypes.WINFUNCTYPE(LRESULT, wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM)
 
@@ -176,6 +199,10 @@ class TrayIcon:
                 self._emit(MENU_ITEMS[choice - _FIRST_ID][0])
 
         def wndproc(hwnd, msg, wparam, lparam):
+            event = system_event(msg, wparam)
+            if event is not None:
+                self._emit(event)
+                return 1 if msg == WM_POWERBROADCAST else 0
             if msg == WM_APP_TRAY:
                 if lparam == WM_RBUTTONUP:
                     show_menu()
@@ -190,6 +217,8 @@ class TrayIcon:
                 return 0
             if msg == WM_DESTROY:
                 shell32.Shell_NotifyIconW(NIM_DELETE, ctypes.byref(nid()))
+                if session_events:
+                    wtsapi32.WTSUnRegisterSessionNotification(hwnd)
                 user32.PostQuitMessage(0)
                 return 0
             return user32.DefWindowProcW(hwnd, msg, wparam, lparam)
@@ -209,6 +238,10 @@ class TrayIcon:
         self._ready.set()
         if not self._ok:
             return
+        # Lock and unlock messages need a registration. Without it the idle check still stops the clock.
+        session_events = bool(wtsapi32.WTSRegisterSessionNotification(self._hwnd, 0))  # THIS_SESSION
+        if not session_events:
+            log.warning("Lock notifications unavailable, the idle check still pauses the clock")
         msg = wintypes.MSG()
         while user32.GetMessageW(ctypes.byref(msg), None, 0, 0) > 0:
             user32.TranslateMessage(ctypes.byref(msg))

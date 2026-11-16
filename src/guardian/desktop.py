@@ -12,36 +12,22 @@ import threading
 import time
 import tkinter as tk
 from ctypes import wintypes
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from tkinter import messagebox, ttk
 
 from . import autostart, fieldnotes, integrations
+from .activity_log import ActivityLog
 from .core import ResultStore, SurpriseClock, attempt_label, within_study_window
 from .evidence_ui import EvidencePanel
 from .logging_setup import setup_logging
+from .presence import Presence, is_user_active
 from .questions import get_questions
 from .results_ui import show_exam_result
 from .session_state import SessionState, SessionStore, parse_schedule
 from .single_instance import SingleInstance
 from .task_store import TaskStore
 from .tray import TrayIcon
-
-
-class LASTINPUTINFO(ctypes.Structure):
-    _fields_ = [("cbSize", wintypes.UINT), ("dwTime", wintypes.DWORD)]
-
-
-def is_user_active(idle_limit_sec: int = 180) -> bool:
-    if sys.platform != "win32":
-        return True  # Cross-platform demo only; real eligibility needs Windows.
-    info = LASTINPUTINFO()
-    info.cbSize = ctypes.sizeof(LASTINPUTINFO)
-    if not ctypes.windll.user32.GetLastInputInfo(ctypes.byref(info)):
-        return False
-    now = ctypes.windll.kernel32.GetTickCount() & 0xFFFFFFFF
-    idle_ms = (now - info.dwTime) & 0xFFFFFFFF
-    return idle_ms < idle_limit_sec * 1000
 
 
 class GuardianUI:
@@ -62,6 +48,12 @@ class GuardianUI:
         self.pending = False
         self.surprise_popup = None
         self.last_tick = time.monotonic()
+        self.presence = Presence()
+        self.paused_reason: str | None = None
+        self.activity = ActivityLog(app_data / "guardian_mvp.sqlite3")
+        self.unsaved_seconds = 0.0
+        self.activity_day = date.today()
+        self.saved_today = self.activity.seconds_on(self.activity_day)
         self.topic = tk.StringVar(value="Google Cloud")
         self.model = tk.StringVar(value="qwen3.5:4b")
         self.question_source = tk.StringVar(value="Banco local (rápido)")
@@ -213,13 +205,17 @@ class GuardianUI:
         self.pending_text.set(
             "● Examen pendiente: pulsa 'Hacer examen ahora'" if self.pending else "○ Sin examen pendiente"
         )
-        if self.enabled and self.until is not None:
+        today = int(self.saved_today + self.unsaved_seconds)
+        studied = f"Tiempo activo hoy: {today // 3600} h {today % 3600 // 60} min"
+        if self.enabled and self.until is not None and self.paused_reason:
+            self.next_review.set(f"Contador en pausa: {self.paused_reason} · {studied}")
+        elif self.enabled and self.until is not None:
             left = max(0, int(self.clock.target - self.clock.eligible))
             self.next_review.set(
-                f"Siguiente repaso: en unos {max(1, left // 60)} min de actividad (aleatorio)"
+                f"Siguiente repaso: en unos {max(1, left // 60)} min de actividad (aleatorio) · {studied}"
             )
         else:
-            self.next_review.set("Siguiente repaso: sin sesión activa")
+            self.next_review.set(f"Siguiente repaso: sin sesión activa · {studied}")
 
     # ---- session lifecycle (explicit, persisted so a restart keeps the user's choice) ----
     def _persist(self) -> None:
@@ -332,6 +328,10 @@ class GuardianUI:
         try:
             while True:
                 cmd = self.commands.get_nowait()
+                if self.presence.on_event(cmd):
+                    if cmd == "resume":
+                        self.last_tick = time.monotonic()  # never count the time spent suspended
+                    continue
                 {
                     "open": self._show,
                     "start": self._start,
@@ -358,15 +358,19 @@ class GuardianUI:
             self._refresh_views()
             if self.enabled and self.until is not None and now >= self.until:
                 self._stop()
+            active = is_user_active() and not self.presence.suspended and not self.presence.locked
+            self.paused_reason = self.presence.paused_reason(active)
+            before = self.clock.eligible
             due = self.clock.tick(
                 elapsed,
-                active=is_user_active(),
+                active=active,
                 allowed=self.enabled
                 and now >= self.pause_until
                 and self.until is not None
                 and (not self.windows or within_study_window(now, self.windows)),
                 protected=self.in_quiz,
             )
+            self._count_activity(self.clock.eligible - before)
             if due and not self.in_quiz and not self.pending:
                 self.pending = True
                 self._persist()  # the pending exam must survive a restart
@@ -374,6 +378,21 @@ class GuardianUI:
                 self._surprise_notice()  # works with the panel hidden: it is a topmost Toplevel
         finally:
             self.root.after(1000, self._tick)
+
+    def _count_activity(self, seconds: float) -> None:
+        """Keep today's eligible seconds, written to SQLite about every 30 s to avoid a write per tick."""
+        self.unsaved_seconds += max(0.0, seconds)
+        if self.unsaved_seconds >= 30 or date.today() != self.activity_day:
+            self._flush_activity()
+
+    def _flush_activity(self) -> None:
+        if self.unsaved_seconds > 0:
+            self.activity.add(self.activity_day, self.unsaved_seconds)
+            self.saved_today += self.unsaved_seconds
+            self.unsaved_seconds = 0.0
+        if date.today() != self.activity_day:  # a new day starts from its own total
+            self.activity_day = date.today()
+            self.saved_today = self.activity.seconds_on(self.activity_day)
 
     def _surprise_notice(self) -> None:
         """Visible non-modal reminder; never steals keyboard focus."""
@@ -554,6 +573,7 @@ class GuardianUI:
             self._show()
             if not messagebox.askyesno("Salir", "¿Salir del examen sin guardar las respuestas?"):
                 return
+        self._flush_activity()
         self.tray.stop()
         self.store.close()
         self.root.destroy()  # the saved session (if any) is kept: it is the user's explicit choice

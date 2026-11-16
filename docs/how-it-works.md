@@ -8,7 +8,7 @@ Status: draft.
 
 1. The user starts Guardian. It creates a tray icon and the panel, or only the icon with `--hidden`.
 2. The user starts a study session, optionally with a schedule. Nothing runs before this.
-3. Every second the clock adds eligible seconds, only while the user is active, inside the schedule and not paused. Suspension never adds time.
+3. Every second the clock adds eligible seconds, only while the user is active, inside the schedule and not paused. Suspension and a locked session stop it, through Windows messages on the hidden tray window. The panel shows today's active time.
 4. After 10 to 25 eligible minutes a small topmost notice appears without taking keyboard focus. One quiz stays pending at a time.
 5. The user answers five questions from the local bank. Four correct from a reviewed source is a certified pass.
 6. The result is stored in SQLite and shown in the Repasos and Progreso tabs. Unverified sources are marked as practice.
@@ -21,6 +21,8 @@ Status: draft.
 - `src/guardian/core.py`: questions, grading, the surprise clock and the results store.
 - `src/guardian/session_state.py`: the persisted session, schedule and pending quiz.
 - `src/guardian/single_instance.py`: one instance per user session.
+- `src/guardian/presence.py`: idle time, lock, suspension and full-screen state, read as Windows flags only.
+- `src/guardian/activity_log.py`: eligible seconds per day.
 - `src/guardian/autostart.py`: opt-in, reversible autostart in the current user registry.
 - `src/guardian/fieldnotes.py` and `src/guardian/questions.py`: the question sources.
 - `src/guardian/integrations.py`: honest health of Ollama and FocoLocal.

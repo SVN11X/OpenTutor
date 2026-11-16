@@ -12,7 +12,9 @@ import threading
 import time
 import tkinter as tk
 from ctypes import wintypes
+from dataclasses import replace
 from datetime import UTC, date, datetime, timedelta
+from datetime import time as day_time
 from pathlib import Path
 from tkinter import messagebox, ttk
 
@@ -48,6 +50,9 @@ class GuardianUI:
             app_data / "guardian_mvp.sqlite3", legacy_json=app_data / "session.json"
         )
         self.enabled = False  # opt-in: a session starts only if the user started it before
+        self.user_stopped = False  # Terminar or Emergencia: all-day mode waits for the next start
+        self.start_label = tk.StringVar(value=self._start_text())
+        self.all_day_var = tk.BooleanVar(value=self.settings.all_day)
         self.pause_until = _EPOCH
         self.in_quiz = False
         self.pending = False
@@ -78,6 +83,8 @@ class GuardianUI:
         self._render()
         self._refresh_stats()
         self._restore_session()
+        if self.settings.all_day and not self.enabled:
+            self._start()  # all-day mode: the owner chose to study from sign-in, decision 0007
         found, _text = bank_summary(self.settings.bank_path)
         if not found and self.settings.source != "ollama":
             self.status.set("No encuentro el banco de preguntas: elige su carpeta en Ajustes")
@@ -127,7 +134,7 @@ class GuardianUI:
         ttk.Label(today, textvariable=self.last_result).pack(anchor="w", pady=(2, 8))
         controls = ttk.Frame(today)
         controls.pack(anchor="w", pady=(0, 8))
-        ttk.Button(controls, text="Iniciar estudio (60 min)", command=self._start).pack(
+        ttk.Button(controls, textvariable=self.start_label, command=self._start).pack(
             side="left", padx=(0, 7)
         )
         ttk.Button(controls, text="Pausar 15 min", command=self._pause).pack(side="left", padx=(0, 7))
@@ -181,6 +188,12 @@ class GuardianUI:
             variable=self.autostart_var,
             command=self._toggle_autostart,
         ).pack(anchor="w")
+        ttk.Checkbutton(
+            when,
+            text="Todo el día: la sesión empieza sola al iniciar Windows y se renueva a medianoche",
+            variable=self.all_day_var,
+            command=self._toggle_all_day,
+        ).pack(anchor="w", pady=(4, 0))
 
     def _refresh_views(self) -> None:
         """Recompute the read-only panels from SQLite and the clock. Cheap, UI thread."""
@@ -246,17 +259,25 @@ class GuardianUI:
             if self.enabled:
                 self.root.after(2000, self._surprise_notice)
 
+    def _start_text(self) -> str:
+        return "Iniciar día" if self.settings.all_day else "Iniciar estudio (60 min)"
+
     def _start(self) -> None:
         try:
             self.windows = parse_schedule(self.schedule.get())
         except ValueError as err:
             self.status.set(str(err))
             return
+        now = _now()
         self.enabled = True
-        self.until = _now() + timedelta(minutes=60)
+        self.user_stopped = False
+        self.until = session_end(now, all_day=self.settings.all_day)
         self.pause_until = _EPOCH
         self._persist()
-        self.status.set("Estudiando · 60 min · se cuentan solo segundos de actividad")
+        if self.settings.all_day:
+            self.status.set("Estudiando todo el día · se cuentan solo segundos de actividad")
+        else:
+            self.status.set("Estudiando · 60 min · se cuentan solo segundos de actividad")
 
     def _pause(self) -> None:
         if not self.enabled:
@@ -266,17 +287,19 @@ class GuardianUI:
         self._persist()
         self.status.set("Pausado 15 min · sin preguntas")
 
-    def _stop(self) -> None:
+    def _stop(self, by_user: bool = True) -> None:
+        """End the session. A pending quiz stays pending: only Emergencia drops it (decision 0007)."""
         self.enabled = False
         self.until = None
-        self.pending = False
+        self.user_stopped = by_user
         self.clock.reset_after_quiz()
         self._persist()
-        self.status.set("Desactivado · sin bloqueos")
+        self.status.set("Sesión terminada" + (" · queda un examen pendiente" if self.pending else ""))
 
     def _emergency(self) -> None:
         """Always-available exit: ends the session, drops any pending quiz, forgets saved state.
         Future FocoLocal leases created by Guardian must also be released here."""
+        self.pending = False
         self._stop()
         self.windows = ()
         self.schedule.set("")
@@ -302,6 +325,30 @@ class GuardianUI:
             self.clock = SurpriseClock(interval=self._interval())
         self._persist()
         self._refresh_health(repeat=False)
+
+    def _toggle_all_day(self) -> None:
+        """Save the all-day choice. Turning it on also turns on autostart, or it cannot start at sign-in."""
+        on = self.all_day_var.get()
+        try:
+            self.settings = self.settings_store.save(replace(self.settings_store.load(), all_day=on))
+        except (ValueError, OSError) as err:
+            self.all_day_var.set(self.settings.all_day)
+            self.status.set(f"No se pudo guardar: {err}")
+            return
+        self.start_label.set(self._start_text())
+        if on and not self.autostart_var.get():
+            self.autostart_var.set(True)
+            self._toggle_autostart()
+        if on and not self.enabled:
+            self._start()
+        elif on and self.until is not None:
+            self.until = session_end(_now(), all_day=True)
+            self._persist()
+        self.status.set(
+            "Todo el día activado: empieza sola al iniciar Windows. Se apaga con esta misma casilla"
+            if on
+            else "Todo el día desactivado: la próxima sesión durará 60 min"
+        )
 
     def _toggle_autostart(self) -> None:
         try:
@@ -374,7 +421,9 @@ class GuardianUI:
         try:
             self._refresh_views()
             if self.enabled and self.until is not None and now >= self.until:
-                self._stop()
+                self._stop(by_user=False)
+                if self.settings.all_day:
+                    self._start()  # a new day of the all-day session
             active = is_user_active() and not self.presence.suspended and not self.presence.locked
             self.paused_reason = self.presence.paused_reason(active)
             before = self.clock.eligible
@@ -597,6 +646,13 @@ class GuardianUI:
         self.tray.stop()
         self.store.close()
         self.root.destroy()  # the saved session (if any) is kept: it is the user's explicit choice
+
+
+def session_end(now: datetime, *, all_day: bool) -> datetime:
+    """When a session started now ends: the next local midnight in all-day mode, else in 60 minutes."""
+    if all_day:
+        return datetime.combine(now.date() + timedelta(days=1), day_time.min, tzinfo=now.tzinfo)
+    return now + timedelta(minutes=60)
 
 
 def _no_activate(window: tk.Toplevel) -> None:

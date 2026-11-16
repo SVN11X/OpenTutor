@@ -11,10 +11,18 @@ from __future__ import annotations
 from random import Random, SystemRandom
 
 from ..core import Question
+from ..i18n import t
 from .check import KIND_INFO
 from .pptx_check import Result
 
-_TITLE_DECOYS = ("Introducción", "Resumen", "Conclusiones", "Agenda", "Gracias", "Preguntas")
+_TITLE_DECOYS = (
+    t("defense.title_decoy_introduccion"),
+    t("defense.title_decoy_resumen"),
+    t("defense.title_decoy_conclusiones"),
+    t("defense.title_decoy_agenda"),
+    t("defense.title_decoy_gracias"),
+    t("defense.title_decoy_preguntas"),
+)
 _TERM_DECOYS = (
     "Kubernetes",
     "Terraform",
@@ -42,7 +50,7 @@ def _options(correct: str, wrong: list[str], rng: Random | SystemRandom) -> tupl
         if len(chosen) == 3:
             break
     if len(chosen) < 3:
-        raise ValueError("No hay suficientes opciones distintas")
+        raise ValueError(t("defense.not_enough_options"))
     options = [correct, *chosen]
     rng.shuffle(options)
     return tuple(options), options.index(correct)
@@ -53,10 +61,10 @@ def _count_question(count: int, kind: str, rng) -> Question:
     nearby = [n for n in (count - 1, count + 1, count + 2, count + 3, count - 2) if n > 0]
     options, index = _options(str(count), [str(n) for n in nearby], rng)
     return Question(
-        f"¿Cuántas {info['plural']} tiene {info['owner_thing']}?",
+        t("defense.count_prompt", plural=info["plural"], owner_thing=info["owner_thing"]),
         options,
         index,
-        f"El archivo entregado tiene {count} {info['plural']}.",
+        t("defense.count_explanation", count=count, plural=info["plural"]),
     )
 
 
@@ -68,10 +76,10 @@ def _title_question(titles: tuple[str, ...], k: int, kind: str, rng) -> Question
     rng.shuffle(decoys)
     options, index = _options(titles[k], [*others, *decoys], rng)
     return Question(
-        f"¿Cuál es el título de la {info['singular']} {k + 1}?",
+        t("defense.title_prompt", singular=info["singular"], number=k + 1),
         options,
         index,
-        f"La {info['singular']} {k + 1} se titula «{titles[k]}».",
+        t("defense.title_explanation", singular=info["singular"], number=k + 1, title=titles[k]),
     )
 
 
@@ -80,10 +88,10 @@ def _term_question(correct: str, full_text: str, rng) -> Question:
     rng.shuffle(absent)
     options, index = _options(correct, absent, rng)
     return Question(
-        "¿Cuál de estos términos aparece en tu archivo?",
+        t("defense.term_prompt"),
         options,
         index,
-        f"«{correct}» aparece en el texto de tu archivo. Los otros no.",
+        t("defense.term_explanation", term=correct),
     )
 
 

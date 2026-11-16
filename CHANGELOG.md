@@ -14,6 +14,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Changed
 
+- The default source is the whole bank as practice. The free text topic field is gone.
 - Quiz questions are chosen by spaced repetition: wrong answers return sooner, right answers later, and the bank no longer runs out when the pool is small.
 - The study session, schedule and pending quiz moved from session.json to the SQLite file. An old session.json is imported once and renamed to session.json.migrated.
 

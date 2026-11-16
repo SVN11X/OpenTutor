@@ -14,6 +14,7 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from ..i18n import t
 from .safe_zip import UnsafeArchive, has_macros, open_safe
 
 RUBRIC_VERSION = "pptx-1"
@@ -59,29 +60,29 @@ def _fail(name: str, detail: str) -> Result:
 def _parse(xml: bytes) -> ET.Element:
     head = xml[:4096].upper()
     if b"<!DOCTYPE" in head or b"<!ENTITY" in head:
-        raise UnsafeArchive("XML con DOCTYPE o ENTITY rechazado")
+        raise UnsafeArchive(t("check_pptx.doctype_rejected"))
     try:
         return ET.fromstring(xml)
     except ET.ParseError as err:
-        raise UnsafeArchive(f"XML dañado: {err}") from None
+        raise UnsafeArchive(t("check_pptx.xml_broken", error=err)) from None
 
 
 def check_pptx(
     path: Path | str, *, expected_slides: int | None = None, required_terms: tuple[str, ...] = ()
 ) -> Result:
     if Path(path).suffix.lower() != ".pptx":
-        return _fail("extension", "La extensión debe ser .pptx")
+        return _fail("extension", t("check_pptx.extension"))
     try:
         zf = open_safe(path)
     except UnsafeArchive as err:
         return _fail("archive", str(err))
     with zf:
         if has_macros(zf):
-            return _fail("macros", "Contiene macros VBA: rechazado sin abrirlo")
+            return _fail("macros", t("check_pptx.macros_found"))
         numbers = sorted(int(m.group(1)) for n in zf.namelist() if (m := _SLIDE.match(n)))
         if not numbers:
-            return _fail("slides", "No se encontraron diapositivas")
-        checks: list[Check] = [Check("archive", True), Check("macros", True, "sin macros")]
+            return _fail("slides", t("check_pptx.no_slides"))
+        checks: list[Check] = [Check("archive", True), Check("macros", True, t("check_pptx.macros_ok"))]
         texts: list[str] = []
         titles: list[str] = []
         titled, placeholder_hits, empty = 0, [], []
@@ -104,24 +105,37 @@ def check_pptx(
         Check(
             "slide_count",
             count_ok,
-            f"{len(numbers)} diapositivas" + ("" if count_ok else f", se esperaban {expected_slides}"),
+            t("check_pptx.slide_count_detail", count=len(numbers))
+            + ("" if count_ok else t("check_pptx.expected_slides", expected=expected_slides)),
         )
     )
-    checks.append(Check("no_empty_slides", not empty, f"vacías: {empty}" if empty else ""))
+    checks.append(
+        Check("no_empty_slides", not empty, t("check_pptx.empty_detail", empty=empty) if empty else "")
+    )
     checks.append(
         Check(
             "no_placeholder_text",
             not placeholder_hits,
-            f"texto de plantilla en: {placeholder_hits}" if placeholder_hits else "",
+            t("check_pptx.placeholder_detail", hits=placeholder_hits) if placeholder_hits else "",
         )
     )
-    checks.append(Check("titles", titled == len(numbers), f"{titled}/{len(numbers)} con título"))
+    checks.append(
+        Check(
+            "titles", titled == len(numbers), t("check_pptx.titles_detail", titled=titled, total=len(numbers))
+        )
+    )
     non_empty = [t.casefold() for t in texts if t]
     checks.append(Check("no_duplicate_slides", len(set(non_empty)) == len(non_empty)))
     blob = " ".join(texts).casefold()
     missing = [t for t in required_terms if not re.search(rf"\b{re.escape(t.casefold())}\b", blob)]
     terms_ok = not missing
-    checks.append(Check("required_terms", terms_ok, f"faltan: {missing}" if missing else ""))
+    checks.append(
+        Check(
+            "required_terms",
+            terms_ok,
+            t("check_pptx.required_terms_detail", missing=missing) if missing else "",
+        )
+    )
     hard = [c for c in checks if c.name != "required_terms"]
     if not all(c.ok for c in hard):
         status = "failed"

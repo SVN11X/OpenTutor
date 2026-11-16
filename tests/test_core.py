@@ -54,6 +54,19 @@ class GuardianTests(unittest.TestCase):
         answers[1] = (answers[1] + 1) % 4
         self.assertEqual(grade(q, answers), (3, False))
 
+    def test_fallback_gcp_bank(self):
+        self.assertEqual(len(FALLBACK_GCP), 10)
+        for question in FALLBACK_GCP:
+            self.assertEqual(len(question.options), 4)
+            self.assertTrue(0 <= question.answer_index < 4)
+            self.assertTrue(question.prompt.strip())
+            self.assertTrue(question.explanation.strip())
+        self.assertEqual(len({q.prompt.strip().casefold() for q in FALLBACK_GCP}), 10)
+        self.assertEqual(
+            FALLBACK_GCP[0].prompt,
+            "¿Qué servicio de Google Cloud está orientado a análisis SQL de grandes conjuntos de datos?",
+        )
+
     def test_validation_rejects_invalid_llm_data(self):
         valid = [x.to_dict() for x in FALLBACK_GCP[:5]]
         self.assertEqual(len(validate_questions(valid)), 5)

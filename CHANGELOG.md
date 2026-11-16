@@ -7,6 +7,11 @@ All notable changes to this project are documented here. The format follows [Kee
 ### Added
 
 - `docs/gallery/`: screenshots of 16 states of the panel and the quiz windows, shown by GitHub. `scripts/gallery.py` regenerates them with throwaway data and a sample bank, capturing only Guardian's own windows. A `gallery` workflow builds it for every pull request.
+
+## [0.4.0] - 2026-11-16
+
+### Added
+
 - Guardian's own icon, a blue shield with a white check, in the tray, every window, the program file and the installer. `scripts/make_icon.py` draws it with the standard library.
 - Bank questions appear in Spanish when the bank ships a current translation, with a new "Idioma de las preguntas" setting in Ajustes to keep the original English.
 
@@ -18,7 +23,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Fixed
 
-- With a quiz pending, the counter no longer counts down to a next question. It says it waits for the pending quiz.
+- With a quiz pending, the counter says it waits for that quiz instead of counting down to a next question.
 
 ## [0.3.0] - 2026-11-16
 

@@ -17,6 +17,7 @@ Compression=lzma2
 SolidCompression=yes
 UninstallDisplayIcon={app}\OpenTutorGuardian.exe
 LicenseFile=..\..\LICENSE
+SetupIconFile=..\..\src\guardian\assets\guardian.ico
 
 [Files]
 Source: "..\..\dist\OpenTutorGuardian\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion

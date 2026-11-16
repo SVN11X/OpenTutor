@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-16
+
 ### Added
 
 - Guardian's own icon, a blue shield with a white check, in the tray, every window, the program file and the installer. `scripts/make_icon.py` draws it with the standard library.
@@ -14,6 +16,10 @@ All notable changes to this project are documented here. The format follows [Kee
 - All user-facing text lives in `src/guardian/locales/es.json`, read through `guardian.i18n.t`, and the 10 backup questions in `src/guardian/content/fallback_gcp.json`. A test fails when a text is missing or unused. Nothing changes for the user.
 - The tray menu says "Iniciar estudio", which fits both the 60-minute and the all-day session.
 - Spaced repetition history is keyed by the bank question id, so history from before this change starts again.
+
+### Fixed
+
+- With a quiz pending, the counter says it waits for that quiz instead of counting down to a next question.
 
 ## [0.3.0] - 2026-11-16
 

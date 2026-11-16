@@ -37,10 +37,14 @@ def headline(state: AgentState, now: datetime) -> str:
     return t("today.headline_until", time=state.until) if state.until else t("today.headline_studying")
 
 
-def counter_line(enabled: bool, paused_reason: str | None, eligible: float, target: float) -> str:
+def counter_line(
+    enabled: bool, paused_reason: str | None, eligible: float, target: float, pending: bool = False
+) -> str:
     """How far the next question is, or why the clock is stopped."""
     if not enabled:
         return t("today.counter_stopped")
+    if pending:
+        return t("today.counter_pending")
     if paused_reason:
         return t("today.counter_paused", reason=paused_reason)
     left = max(0, int(target - eligible))

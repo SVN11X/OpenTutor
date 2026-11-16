@@ -334,6 +334,7 @@
   "today.active_time": "Tiempo activo hoy: {hours} h {minutes} min",
   "today.counter_next": "Próxima pregunta en unos {minutes} min de actividad (al azar)",
   "today.counter_paused": "Contador en pausa: {reason}",
+  "today.counter_pending": "Contador en espera: vuelve a correr cuando respondas el examen pendiente",
   "today.counter_stopped": "Contador detenido: inicia una sesión para recibir preguntas",
   "today.headline_all_day": "● Estudiando todo el día",
   "today.headline_in_quiz": "✎ Examen abierto: responde las 5 preguntas",

@@ -1,109 +1,68 @@
-# OpenTutor Guardian. notas de uso (Windows)
+# Usage guide (Windows)
 
-Este directorio es un agente de escritorio local.
-No modifica FocoLocal. Es una prueba funcional
-reducida, no un producto completo ni un bloqueo estricto todavía.
+OpenTutor Guardian 0.3.0. The panel is in Spanish, this guide is in English. Design reasons are in
+[decisions/0007-insistent-quiz-and-all-day-mode.md](decisions/0007-insistent-quiz-and-all-day-mode.md).
 
-## Incluido / no incluido
+## Install or run
 
-**Implementado**
+- Installer: run `OpenTutorGuardian-Setup-0.3.0.exe` from `dist\installer\` or a release. No administrator
+  rights. It is unsigned, so SmartScreen may ask for "More info" and "Run anyway".
+- From source, in Windows PowerShell at the repository root: `.\scripts\run-dev.ps1`. Add `-Hidden` to start
+  in the tray, `-Demo` for quizzes after 20 to 30 seconds of activity, `-TestsOnly` to run the tests.
 
-- App de escritorio opt-in, usando `tkinter` (Python 3.12 recomendado).
-- Sesiones de 60 minutos iniciadas manualmente: no hay interrupciones fuera de la sesión.
-- Contador de tiempo activo de 10 a 25 minutos y aviso no modal de 5 preguntas.
-- Corrección con aprobación 4/5 y persistencia local en SQLite.
-- **Fieldnotes primero:** preguntas desde `../GCP_Data_Engineer_Fieldnotes/content/imported.json`, sin esperar a Ollama.
-- Dos modalidades de banco: **revisado/puntuable** y **completo/práctica no puntuable**; se excluyen imágenes y respuestas múltiples en este MVP.
-- Ollama opcional por selección explícita, con esquema JSON, verificación estructural y límite de 30 segundos por solicitud.
-- Banco pequeño de contingencia para Google Cloud cuando no quedan cinco preguntas revisadas.
-- Pausa de 15 minutos, detención voluntaria y salida normal.
+## First steps
 
-**Pendiente (no afirmar como implementado)**
+1. Open the panel from the tray icon next to the clock. The Hoy tab lists the first steps.
+2. Ajustes, "Qué te pregunto": check the line under "Carpeta del banco". It must say how many questions it
+   found. If not, press "Elegir carpeta…" and pick `GCP_Data_Engineer_Fieldnotes` (or its `content` folder).
+   The environment variable `GUARDIAN_GCP_BANK` also works.
+3. Ajustes, "Cuándo": turn on "Todo el día". This also turns on "Iniciar Guardian con Windows".
+4. Optional: a study schedule such as `08:00-13:00, 15:00-20:00`. Outside it, no quiz opens.
 
-- Detección fiable de reuniones, presentaciones y tareas sensibles.
-- Entregas PPTX conectadas al panel, revisión de contenido y defensa oral/escrita.
-- API/IPC con FocoLocal y bloqueo de aplicaciones/navegadores; no hay bloqueo alguno.
-- Instalador `.exe`, pruebas GUI reales con DPI y dos monitores, revisión pedagógica humana.
+## What happens during the day
 
-## Prerrequisitos
+- The session starts when Guardian starts and renews at midnight. "Terminar" ends it until the next start
+  or until you press "Iniciar día".
+- The counter adds only seconds of real activity: keyboard or mouse in the last 3 minutes, session not
+  locked, computer not suspended, not paused, inside the schedule. Hoy shows the minutes to the next quiz,
+  today's active time, and why the counter is paused.
+- When the quiz is due it opens centered and on top, with no exit button. Closing or minimizing it brings it
+  back after 5 seconds. It waits while a full-screen app or presentation mode is on, and while paused,
+  locked or outside the schedule. For 2 seconds after it appears it ignores keys and clicks.
+- Answer all 5 questions to close it. The result appears in Repasos and Progreso.
 
-- Windows 10/11, Python con `tkinter` (distribución estándar), Ollama instalado en local.
-- Modelo sugerido: `qwen3.5:4b` **si está instalado**. El tiempo de generación
-  depende del hardware; el programa lo solicita en un hilo para no congelar la UI.
-- No hay dependencias Python de terceros en este MVP.
+## What it asks
 
-## Ejecutar (en PowerShell desde la raíz del repositorio)
+- Question set: Google Cloud Professional Data Engineer, the only one for now.
+- Source: "Todo el banco (práctica)" uses about 305 questions without images and with one answer. Their keys
+  are not reviewed, so results count as practice, never as a certified pass. "Solo revisadas" uses 12
+  reviewed questions plus 10 backup ones. "Ollama local" generates questions with a local model and may take
+  up to 30 seconds.
+- Exam domains: uncheck the ones you do not want.
+- Minutes between quizzes: a random value inside the range, 2 to 240.
+- Spaced repetition: a wrong answer returns after 10 minutes, a right one after 1 hour, then 4 hours, 1, 3
+  and 7 days. Due questions come first, then new ones.
 
-```powershell
-python -m unittest discover -s tests -v
-python -m guardian.desktop
-```
+## Ways out
 
-Para probar rápidamente las alertas sin esperar 10–25 min:
+- Tray menu: Pausar (15 minutes), Terminar, Emergencia, Salir. They work while a quiz is open.
+- Terminar keeps the pending quiz for the next session. Emergencia ends the session, drops the pending quiz
+  and forgets the schedule. Salir closes Guardian and keeps the quiz pending.
+- Turn off "Ventana insistente" in Ajustes to get a small notice with "Más tarde" instead.
+- Uninstall from Windows Settings, Apps. The uninstaller removes the autostart value.
 
-```powershell
-python -m guardian.desktop --demo
-```
+## Data and privacy
 
-Selecciona **Banco local (rápido)** para cinco preguntas revisadas de Google Cloud.
-No espera a Ollama. La aplicación encuentra el repositorio hermano:
-`C:\my_drive\Portafolio\GCP_Data_Engineer_Fieldnotes\content\imported.json`.
-Si el banco está en otra ubicación, establece la variable `GUARDIAN_GCP_BANK`
-con la ruta de la carpeta o del `imported.json` antes de ejecutar la app.
+- Everything is stored in `%LOCALAPPDATA%\OpenTutorGuardian\guardian_mvp.sqlite3`: results, settings,
+  session, per-question scheduling and active seconds per day. Logs are in the same folder.
+- Guardian reads only the time since the last input, lock and suspend messages, and whether a full-screen
+  app or presentation mode is on. Never keys, screens, window titles or URLs. No telemetry.
+- The question bank is read only. It is never copied or changed.
+- The only network call is the optional local Ollama at `127.0.0.1:11434`.
 
-**Banco completo (práctica)** permite utilizar las preguntas no revisadas que
-puedan representarse sin imágenes y con una sola respuesta; su clave es
-orientativa, los resultados nunca otorgan aprobaciones para desbloqueo.
-El banco original no se modifica ni se copia. 349 preguntas importadas no
-significa 349 preguntas verificadas o compatibles con el MVP.
+## Known limits
 
-Para generar preguntas nuevas, elige **Ollama (puede tardar)**. Es una
-acción opcional, no la ruta predeterminada de exámenes sorpresa.
-Para otros temas sin banco local, el modo rápido informa la ausencia de contenido.
-
-El archivo SQLite se guarda en
-`%LOCALAPPDATA%\OpenTutorGuardian\guardian_mvp.sqlite3`.
-
-## Aislamiento, seguridad, límites
-
-- No se recolectan teclas, ventanas, capturas ni URL; solo se consulta el tiempo
-  desde la última entrada mediante la API de Windows.
-- Las interrupciones solo se activan por acción del usuario y se pueden detener.
-- No se usan políticas de sistema, controlador, proxy, `hosts`, firewall ni credenciales elevadas.
-- El MVP es **fail-open**: si Ollama no responde no se impone restricción alguna.
-- Las respuestas de Ollama están estructuradas, pero eso **no verifica su veracidad**.
-- Fieldnotes se abre solo en lectura. Filtrar por `status=reviewed`, `gradable=true`,
-  sin imágenes, sin respuesta múltiple; nunca alterar las 349 preguntas, sus 25 imágenes ni claves.
-- El modo de práctica puede usar claves importadas **no verificadas** y no genera
-  aprobaciones válidas para ningún bloqueo futuro.
-  No usar evaluaciones generadas sin revisión humana como condición para bloquear
-  aplicaciones ni para decisiones de alto impacto.
-- No registra texto de respuestas, solo índice elegido, enunciados y puntuación.
-- La comprobación de actividad mediante Win32 es aproximada: no implica que se
-  esté aprendiendo. La elegibilidad real y el modo de segundo monitor requieren
-  pruebas e integración adicional.
-
-## Desarrollo posterior
-
-Leer [`contracts.md`](contracts.md) y
-[`acceptance.md`](acceptance.md) antes de modificar FocoLocal.
-Seguir `SVN11X/standards`: PRs pequeños, no repetir pruebas sin cambio de huella,
-no commits/push/merge no autorizados.
-
-## v0.2.0 resident agent (delivery A)
-
-Run from the repository root in Windows PowerShell:
-
-    .\scripts\run-dev.ps1            # tests, then the panel
-    .\scripts\run-dev.ps1 -Hidden    # starts hidden in the tray
-
-- Tray menu: Abrir panel, Iniciar sesión, Pausar, Terminar, Emergencia, Salir.
-- Closing the window hides it to the tray. If the tray icon could not be created, closing exits.
-- One instance per user session. A second launch prints a notice and exits.
-- A started session survives a restart (SQLite, en `%LOCALAPPDATA%\OpenTutorGuardian\guardian_mvp.sqlite3`) until it expires, Terminar or Emergencia.
-- No autostart, no blocking, no network. Unverified questions are practice only.
-- Design: `decisions/0002-resident-agent.md`.
-- Panel tabs: Hoy (state, next review, services, emergency), Tareas (empty state until delivery B),
-  Repasos (pending exam and recent results), Progreso, Ajustes (topic, source, schedule, autostart).
-  Every status uses icon + text. Unverified sources show as "◐ Práctica".
-- Audits and plans: `docs/FOCOLOCAL_ADAPTER_AUDIT.md`, `docs/PRACTICE_VALIDATOR_PLAN.md`.
+- No app or site blocking, no FocoLocal link.
+- Windows Do Not Disturb and video calls in a normal window are not detected.
+- Bank questions appear in the language of the bank, mostly English.
+- High DPI at 150 percent, two monitors and real suspend and lock still need a check on the owner's machine.

@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-16
+
 ### Added
 
 - Insistent quiz window, on by default: a due quiz opens by itself, centered and on top, with no exit button. It comes back 5 seconds after a close or minimize, waits while a full-screen app or presentation mode is on, and ignores input for 2 seconds each time it appears. A failed load retries in 5 minutes. A checkbox in Ajustes turns it off.

@@ -9,6 +9,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from ..i18n import t
 from .pptx_check import Check, Result
 
 RUBRIC_VERSION = "md-1"
@@ -45,18 +46,18 @@ def check_markdown(
 ) -> Result:
     path = Path(path)
     if path.suffix.lower() not in (".md", ".markdown"):
-        return _fail("extension", "La extensión debe ser .md o .markdown")
+        return _fail("extension", t("check_md.extension"))
     try:
         if path.stat().st_size > MAX_BYTES:
-            return _fail("readable", "El archivo supera 2 MB")
+            return _fail("readable", t("check_md.too_large"))
         raw = path.read_bytes()
         if b"\x00" in raw:
-            return _fail("readable", "No es un archivo de texto")
+            return _fail("readable", t("check_md.not_text"))
         text = raw.decode("utf-8")
     except UnicodeDecodeError:
-        return _fail("readable", "El archivo debe estar en UTF-8")
+        return _fail("readable", t("check_md.not_utf8"))
     except OSError as err:
-        return _fail("readable", f"No se pudo leer: {err.strerror or err}")
+        return _fail("readable", t("check_md.read_error", error=err.strerror or err))
 
     sections = _sections(text)
     titles = tuple(title for title, _ in sections)
@@ -68,22 +69,38 @@ def check_markdown(
         Check(
             "section_count",
             count_ok,
-            f"{len(sections)} secciones"
-            + ("" if count_ok else f", se esperaban al menos {expected_sections}"),
+            t("check_md.sections_detail", count=len(sections))
+            + ("" if count_ok else t("check_md.sections_expected", expected=expected_sections)),
         )
     )
-    empty = [t for t, body in sections if not _WORD.search(body)]
-    checks.append(Check("no_empty_sections", not empty, f"vacías: {empty}" if empty else ""))
+    empty = [title for title, body in sections if not _WORD.search(body)]
+    checks.append(
+        Check("no_empty_sections", not empty, t("check_md.empty_detail", empty=empty) if empty else "")
+    )
     placeholders = sorted({m.group(0).upper() for m in _PLACEHOLDER.finditer(text)})
     checks.append(
-        Check("no_placeholder_text", not placeholders, f"se encontró: {placeholders}" if placeholders else "")
+        Check(
+            "no_placeholder_text",
+            not placeholders,
+            t("check_md.placeholder_detail", found=placeholders) if placeholders else "",
+        )
     )
     folded = [t.casefold() for t in titles]
     checks.append(Check("no_duplicate_headings", len(set(folded)) == len(folded)))
     needed = MIN_WORDS_PER_SECTION * max(1, expected_sections or 1)
-    checks.append(Check("min_words", len(words) >= needed, f"{len(words)} palabras, mínimo {needed}"))
+    checks.append(
+        Check(
+            "min_words", len(words) >= needed, t("check_md.min_words_detail", words=len(words), needed=needed)
+        )
+    )
     missing = [t for t in required_terms if not re.search(rf"\b{re.escape(t.casefold())}\b", blob)]
-    checks.append(Check("required_terms", not missing, f"faltan: {missing}" if missing else ""))
+    checks.append(
+        Check(
+            "required_terms",
+            not missing,
+            t("check_md.required_terms_detail", missing=missing) if missing else "",
+        )
+    )
 
     hard = [c for c in checks if c.name != "required_terms"]
     if not all(c.ok for c in hard):

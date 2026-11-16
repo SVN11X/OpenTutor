@@ -10,79 +10,34 @@ import json
 import logging
 from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
+from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from .core import Question, validate_questions
 from .fieldnotes import load_pool
+from .i18n import t
 from .spaced import Card, key, pick
 
 log = logging.getLogger(__name__)
 
 # Validated, manually authored fallback for one known topic only. No fake
 # auto-grading of arbitrary subjects when Ollama is unavailable.
-FALLBACK_GCP = [
-    Question(
-        "¿Qué servicio de Google Cloud está orientado a análisis SQL de grandes conjuntos de datos?",
-        ("BigQuery", "Cloud SQL", "Cloud DNS", "Cloud CDN"),
-        0,
-        "BigQuery es un almacén analítico administrado para consultas SQL a escala.",
-    ),
-    Question(
-        "¿Cuál es un servicio de mensajería asíncrona de Google Cloud?",
-        ("Cloud Storage", "Pub/Sub", "Cloud Run", "Cloud NAT"),
-        1,
-        "Pub/Sub permite publicar mensajes y recibirlos mediante suscripciones.",
-    ),
-    Question(
-        "¿Qué producto administra objetos en buckets?",
-        ("Bigtable", "Cloud SQL", "Cloud Storage", "Memorystore"),
-        2,
-        "Cloud Storage almacena objetos en buckets.",
-    ),
-    Question(
-        "¿Qué servicio ejecuta contenedores sin administrar servidores?",
-        ("Cloud DNS", "BigQuery", "Cloud IAM", "Cloud Run"),
-        3,
-        "Cloud Run ejecuta servicios y trabajos contenerizados sin administrar servidores.",
-    ),
-    Question(
-        "¿Para qué se utiliza principalmente Cloud IAM?",
-        ("Administrar permisos", "Crear subredes", "Almacenar objetos", "Crear imágenes de VM"),
-        0,
-        "IAM controla quién puede acceder a qué recursos mediante roles y permisos.",
-    ),
-    Question(
-        "¿Qué servicio ofrece una base de datos relacional administrada?",
-        ("Pub/Sub", "Cloud SQL", "Cloud Logging", "Cloud CDN"),
-        1,
-        "Cloud SQL es un servicio administrado de bases de datos relacionales.",
-    ),
-    Question(
-        "¿Qué herramienta procesa datos mediante pipelines por lotes o streaming?",
-        ("Cloud NAT", "Cloud DNS", "Dataflow", "Cloud CDN"),
-        2,
-        "Dataflow permite ejecutar pipelines de procesamiento por lotes y streaming.",
-    ),
-    Question(
-        "¿Qué servicio organiza acceso y facturación dentro de una jerarquía de recursos?",
-        ("Cloud Router", "Pub/Sub", "Cloud Functions", "Resource Manager"),
-        3,
-        "Resource Manager gestiona la jerarquía de recursos, como organizaciones, carpetas y proyectos.",
-    ),
-    Question(
-        "¿Qué producto permite observar métricas de recursos y servicios?",
-        ("Cloud Monitoring", "Cloud Storage", "Bigtable", "Cloud Armor"),
-        0,
-        "Cloud Monitoring recopila y presenta métricas y alertas.",
-    ),
-    Question(
-        "¿Qué producto está diseñado para almacenar grandes volúmenes de datos NoSQL de columnas anchas?",
-        ("Cloud SQL", "Bigtable", "Cloud DNS", "Secret Manager"),
-        1,
-        "Bigtable es una base de datos NoSQL de columnas anchas para grandes escalas.",
-    ),
-]
+_FALLBACK_PATH = Path(__file__).resolve().parent / "content" / "fallback_gcp.json"
+
+
+def _load_fallback_gcp(path: Path) -> list[Question]:
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        questions = [Question.from_dict(item) for item in raw]
+    except (OSError, ValueError, KeyError, TypeError) as err:
+        raise RuntimeError(f"Fallback question file is missing or invalid: {path} ({err})") from err
+    if not questions:
+        raise RuntimeError(f"Fallback question file has no questions: {path}")
+    return questions
+
+
+FALLBACK_GCP = _load_fallback_gcp(_FALLBACK_PATH)
 
 
 SCHEMA = {
@@ -131,9 +86,9 @@ def get_questions(
     recent prompts are deprioritized; with cards, the scheduler decides spacing.
     """
     if endpoint not in ("http://127.0.0.1:11434", "http://localhost:11434"):
-        raise ValueError("Solo se permite Ollama local en este MVP")
+        raise ValueError(t("questions.local_only"))
     if mode not in {"bank-first", "bank-only", "bank-practice", "ollama"}:
-        raise ValueError("Modo de preguntas inválido")
+        raise ValueError(t("questions.invalid_mode"))
     if cards is None:
         # A far-future due date pushes recent prompts to the very end of the pool,
         # so they are avoided while anything else exists but never exhaust the bank.
@@ -161,11 +116,9 @@ def get_questions(
             if reviewed_count == 5:
                 return selected, "fieldnotes-reviewed"
             return selected, "fieldnotes+fallback-reviewed" if reviewed_count else "fallback-reviewed"
-        raise RuntimeError("No quedan cinco preguntas disponibles sin repetir; revisa tu banco Fieldnotes")
+        raise RuntimeError(t("questions.bank_exhausted"))
     if mode in {"bank-only", "bank-practice"}:
-        raise RuntimeError(
-            "No existe un banco para este tema. Selecciona Ollama si deseas generar preguntas nuevas"
-        )
+        raise RuntimeError(t("questions.no_bank_for_topic"))
 
     query = {
         "model": model,
@@ -202,19 +155,15 @@ def get_questions(
         generated = json.loads(payload["message"]["content"])
         questions = validate_questions(generated["questions"])
         if any(q.prompt.strip().casefold() in recent for q in questions):
-            raise ValueError("Preguntas ya utilizadas")
+            raise ValueError(t("questions.repeated_questions"))
         return questions, "ollama-unreviewed"
     except (URLError, HTTPError, OSError, ValueError, KeyError, TypeError, json.JSONDecodeError) as err:
         log.warning(
             "Ollama gave no usable questions (%s); falling back to the reviewed bank", type(err).__name__
         )
         if not gcp:
-            raise RuntimeError(
-                "Ollama no respondió con preguntas válidas para este tema; no hay banco revisado"
-            ) from None
+            raise RuntimeError(t("questions.ollama_invalid")) from None
         available = pick(FALLBACK_GCP, cards, moment, 5)
         if len(available) < 5:
-            raise RuntimeError(
-                "Banco revisado agotado; se requiere generar y revisar preguntas nuevas"
-            ) from None
+            raise RuntimeError(t("questions.reviewed_bank_exhausted")) from None
         return available, "fallback-reviewed"

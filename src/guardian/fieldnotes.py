@@ -16,6 +16,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 
 from .core import Question
+from .i18n import t
 
 log = logging.getLogger(__name__)
 
@@ -155,7 +156,7 @@ def _load_questions(
     with open(path, encoding="utf-8") as handle:
         payload = json.load(handle)
     if not isinstance(payload, dict) or not isinstance(payload.get("questions"), list):
-        raise ValueError("Formato del banco Fieldnotes inválido")
+        raise ValueError(t("bank.invalid_format"))
 
     translations = _load_translations(Path(path)) if language == "es" else {}
     result = []
@@ -188,7 +189,7 @@ def _load_questions(
             continue
         if not isinstance(explanation, str) or not explanation.strip():
             # Do not manufacture a source-supported explanation.
-            explanation = "Pregunta revisada en Fieldnotes; consulta allí la fundamentación."
+            explanation = t("bank.reviewed_explanation")
         raw_id = item.get("id")
         uid = raw_id if isinstance(raw_id, str) and raw_id else ""
         entries = translations.get(uid, {}) if uid else {}
@@ -200,7 +201,7 @@ def _load_questions(
             if spanish_explanation is not None:
                 explanation = spanish_explanation
         if not reviewed_only:
-            explanation = "Clave original sin verificar; no garantiza validez. " + explanation
+            explanation = t("bank.unverified_prefix") + explanation
         try:
             result.append(Question(prompt, tuple(options), letters.index(answer[0]), explanation, uid=uid))
         except ValueError:

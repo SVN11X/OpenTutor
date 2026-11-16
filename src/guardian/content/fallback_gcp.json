@@ -1,0 +1,112 @@
+[
+  {
+    "prompt": "¿Qué servicio de Google Cloud está orientado a análisis SQL de grandes conjuntos de datos?",
+    "options": [
+      "BigQuery",
+      "Cloud SQL",
+      "Cloud DNS",
+      "Cloud CDN"
+    ],
+    "answer_index": 0,
+    "explanation": "BigQuery es un almacén analítico administrado para consultas SQL a escala."
+  },
+  {
+    "prompt": "¿Cuál es un servicio de mensajería asíncrona de Google Cloud?",
+    "options": [
+      "Cloud Storage",
+      "Pub/Sub",
+      "Cloud Run",
+      "Cloud NAT"
+    ],
+    "answer_index": 1,
+    "explanation": "Pub/Sub permite publicar mensajes y recibirlos mediante suscripciones."
+  },
+  {
+    "prompt": "¿Qué producto administra objetos en buckets?",
+    "options": [
+      "Bigtable",
+      "Cloud SQL",
+      "Cloud Storage",
+      "Memorystore"
+    ],
+    "answer_index": 2,
+    "explanation": "Cloud Storage almacena objetos en buckets."
+  },
+  {
+    "prompt": "¿Qué servicio ejecuta contenedores sin administrar servidores?",
+    "options": [
+      "Cloud DNS",
+      "BigQuery",
+      "Cloud IAM",
+      "Cloud Run"
+    ],
+    "answer_index": 3,
+    "explanation": "Cloud Run ejecuta servicios y trabajos contenerizados sin administrar servidores."
+  },
+  {
+    "prompt": "¿Para qué se utiliza principalmente Cloud IAM?",
+    "options": [
+      "Administrar permisos",
+      "Crear subredes",
+      "Almacenar objetos",
+      "Crear imágenes de VM"
+    ],
+    "answer_index": 0,
+    "explanation": "IAM controla quién puede acceder a qué recursos mediante roles y permisos."
+  },
+  {
+    "prompt": "¿Qué servicio ofrece una base de datos relacional administrada?",
+    "options": [
+      "Pub/Sub",
+      "Cloud SQL",
+      "Cloud Logging",
+      "Cloud CDN"
+    ],
+    "answer_index": 1,
+    "explanation": "Cloud SQL es un servicio administrado de bases de datos relacionales."
+  },
+  {
+    "prompt": "¿Qué herramienta procesa datos mediante pipelines por lotes o streaming?",
+    "options": [
+      "Cloud NAT",
+      "Cloud DNS",
+      "Dataflow",
+      "Cloud CDN"
+    ],
+    "answer_index": 2,
+    "explanation": "Dataflow permite ejecutar pipelines de procesamiento por lotes y streaming."
+  },
+  {
+    "prompt": "¿Qué servicio organiza acceso y facturación dentro de una jerarquía de recursos?",
+    "options": [
+      "Cloud Router",
+      "Pub/Sub",
+      "Cloud Functions",
+      "Resource Manager"
+    ],
+    "answer_index": 3,
+    "explanation": "Resource Manager gestiona la jerarquía de recursos, como organizaciones, carpetas y proyectos."
+  },
+  {
+    "prompt": "¿Qué producto permite observar métricas de recursos y servicios?",
+    "options": [
+      "Cloud Monitoring",
+      "Cloud Storage",
+      "Bigtable",
+      "Cloud Armor"
+    ],
+    "answer_index": 0,
+    "explanation": "Cloud Monitoring recopila y presenta métricas y alertas."
+  },
+  {
+    "prompt": "¿Qué producto está diseñado para almacenar grandes volúmenes de datos NoSQL de columnas anchas?",
+    "options": [
+      "Cloud SQL",
+      "Bigtable",
+      "Cloud DNS",
+      "Secret Manager"
+    ],
+    "answer_index": 1,
+    "explanation": "Bigtable es una base de datos NoSQL de columnas anchas para grandes escalas."
+  }
+]

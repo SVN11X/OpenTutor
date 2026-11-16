@@ -8,6 +8,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 
+from .i18n import t
+
 
 @dataclass(frozen=True)
 class AgentState:
@@ -22,17 +24,17 @@ class AgentState:
 def headline(state: AgentState, now: datetime) -> str:
     """One line that says what Guardian is doing right now."""
     if state.in_quiz:
-        return "✎ Examen abierto: responde las 5 preguntas"
+        return t("today.headline_in_quiz")
     if not state.enabled:
-        suffix = " · tienes un examen pendiente" if state.pending else ""
-        return "○ Sin sesión de estudio" + suffix
+        suffix = t("today.headline_pending_suffix") if state.pending else ""
+        return t("today.headline_no_session") + suffix
     if state.paused_until is not None and now < state.paused_until:
-        return f"⏸ En pausa hasta las {state.paused_until:%H:%M}"
+        return t("today.headline_paused", time=state.paused_until)
     if state.pending:
-        return "● Examen pendiente: se abrirá en cuanto se pueda"
+        return t("today.headline_pending")
     if state.all_day:
-        return "● Estudiando todo el día"
-    return f"● Estudiando hasta las {state.until:%H:%M}" if state.until else "● Estudiando"
+        return t("today.headline_all_day")
+    return t("today.headline_until", time=state.until) if state.until else t("today.headline_studying")
 
 
 def counter_line(
@@ -40,27 +42,24 @@ def counter_line(
 ) -> str:
     """How far the next question is, or why the clock is stopped."""
     if not enabled:
-        return "Contador detenido: inicia una sesión para recibir preguntas"
+        return t("today.counter_stopped")
     if pending:
-        return "Contador en espera: vuelve a correr cuando respondas el examen pendiente"
+        return t("today.counter_pending")
     if paused_reason:
-        return f"Contador en pausa: {paused_reason}"
+        return t("today.counter_paused", reason=paused_reason)
     left = max(0, int(target - eligible))
-    return f"Próxima pregunta en unos {max(1, left // 60)} min de actividad (al azar)"
+    return t("today.counter_next", minutes=max(1, left // 60))
 
 
 def active_today(seconds: float) -> str:
     total = int(seconds)
-    return f"Tiempo activo hoy: {total // 3600} h {total % 3600 // 60} min"
+    return t("today.active_time", hours=total // 3600, minutes=total % 3600 // 60)
 
 
 def setup_steps(*, bank_found: bool, all_day: bool, autostart: bool) -> list[tuple[bool, str]]:
     """First steps for an all-day setup: (done, text). The panel shows them until the owner hides them."""
     return [
-        (
-            bank_found,
-            "Banco de preguntas encontrado" if bank_found else "Elige la carpeta del banco en Ajustes",
-        ),
-        (all_day, "Todo el día activado" if all_day else "Activa 'Todo el día' en Ajustes"),
-        (autostart, "Guardian inicia con Windows" if autostart else "Activa 'Iniciar Guardian con Windows'"),
+        (bank_found, t("today.step_bank_done") if bank_found else t("today.step_bank_todo")),
+        (all_day, t("today.step_all_day_done") if all_day else t("today.step_all_day_todo")),
+        (autostart, t("today.step_autostart_done") if autostart else t("today.step_autostart_todo")),
     ]

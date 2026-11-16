@@ -14,16 +14,18 @@ import threading
 from collections.abc import Callable
 from pathlib import Path
 
+from .i18n import t
+
 log = logging.getLogger(__name__)
 
 # (command, label). The order is the menu order. "emergency" is always visible.
 MENU_ITEMS: tuple[tuple[str, str], ...] = (
-    ("open", "Abrir panel"),
-    ("start", "Iniciar estudio"),
-    ("pause", "Pausar"),
-    ("stop", "Terminar"),
-    ("emergency", "Emergencia"),
-    ("exit", "Salir"),
+    ("open", t("tray.open")),
+    ("start", t("tray.start")),
+    ("pause", t("tray.pause")),
+    ("stop", t("tray.stop")),
+    ("emergency", t("tray.emergency")),
+    ("exit", t("tray.exit")),
 )
 _FIRST_ID = 1000
 ICON_PATH = Path(__file__).resolve().parent / "assets" / "guardian.ico"  # drawn by scripts/make_icon.py

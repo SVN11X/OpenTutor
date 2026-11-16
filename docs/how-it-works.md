@@ -23,6 +23,8 @@ Status: draft.
 - `src/guardian/single_instance.py`: one instance per user session.
 - `src/guardian/presence.py`: idle time, lock, suspension and full-screen state, read as Windows flags only.
 - `src/guardian/activity_log.py`: eligible seconds per day.
+- `src/guardian/i18n.py` and `src/guardian/locales/es.json`: every text the user sees.
+- `src/guardian/content/fallback_gcp.json`: the 10 backup questions.
 - `src/guardian/today_view.py`: the wording of the Hoy tab.
 - `src/guardian/quiz_window.py`: the quiz window and its insistent behavior.
 - `src/guardian/settings_store.py` and `src/guardian/settings_ui.py`: the saved settings and the "Qué te pregunto" section of Ajustes.

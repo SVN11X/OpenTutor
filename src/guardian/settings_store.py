@@ -13,6 +13,8 @@ from contextlib import closing
 from dataclasses import asdict, dataclass, fields, replace
 from pathlib import Path
 
+from .i18n import t
+
 log = logging.getLogger(__name__)
 
 SOURCES = ("practice", "reviewed", "ollama")
@@ -48,22 +50,22 @@ DEFAULTS = Settings()
 def validate(settings: Settings) -> Settings:
     """Return the settings with domains sorted, or raise ValueError with a message for the owner."""
     if settings.question_set not in QUESTION_SETS:
-        raise ValueError("Conjunto de preguntas desconocido")
+        raise ValueError(t("settings_store.unknown_question_set"))
     if settings.source not in SOURCES:
-        raise ValueError("Origen de preguntas desconocido")
+        raise ValueError(t("settings_store.unknown_source"))
     if settings.language not in LANGUAGES:
-        raise ValueError("Idioma de preguntas desconocido")
+        raise ValueError(t("settings_store.unknown_language"))
     if any(type(d) is not int or d not in DOMAIN_IDS for d in settings.domains):
-        raise ValueError("Dominio del examen inválido")
+        raise ValueError(t("settings_store.invalid_domain"))
     low, high = INTERVAL_BOUNDS
     if type(settings.interval_min) is not int or type(settings.interval_max) is not int:
-        raise ValueError("Los minutos deben ser números enteros")
+        raise ValueError(t("settings_store.minutes_not_integers"))
     if not low <= settings.interval_min <= settings.interval_max <= high:
-        raise ValueError(f"Los minutos deben ir de {low} a {high}, y el mínimo no puede superar al máximo")
+        raise ValueError(t("settings_store.minutes_out_of_range", low=low, high=high))
     if not isinstance(settings.bank_path, str) or not isinstance(settings.model, str):
-        raise ValueError("Texto inválido en los ajustes")
+        raise ValueError(t("settings_store.invalid_text"))
     if not all(isinstance(v, bool) for v in (settings.all_day, settings.insistent, settings.guide_done)):
-        raise ValueError("Valor inválido en los ajustes")
+        raise ValueError(t("settings_store.invalid_value"))
     return replace(settings, domains=tuple(sorted(set(settings.domains))))
 
 

@@ -4,6 +4,14 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+
+- Guardian's own icon, a blue shield with a white check, in the tray, every window, the program file and the installer. `scripts/make_icon.py` draws it with the standard library.
+
+### Changed
+
+- The tray menu says "Iniciar estudio", which fits both the 60-minute and the all-day session.
+
 ## [0.3.0] - 2026-11-16
 
 ### Added

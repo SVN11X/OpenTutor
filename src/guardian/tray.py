@@ -12,19 +12,21 @@ import logging
 import sys
 import threading
 from collections.abc import Callable
+from pathlib import Path
 
 log = logging.getLogger(__name__)
 
 # (command, label). The order is the menu order. "emergency" is always visible.
 MENU_ITEMS: tuple[tuple[str, str], ...] = (
     ("open", "Abrir panel"),
-    ("start", "Iniciar sesión"),
+    ("start", "Iniciar estudio"),
     ("pause", "Pausar"),
     ("stop", "Terminar"),
     ("emergency", "Emergencia"),
     ("exit", "Salir"),
 )
 _FIRST_ID = 1000
+ICON_PATH = Path(__file__).resolve().parent / "assets" / "guardian.ico"  # drawn by scripts/make_icon.py
 
 WM_POWERBROADCAST, WM_WTSSESSION_CHANGE = 0x0218, 0x02B1
 _PBT_APMSUSPEND, _PBT_APMRESUMESUSPEND, _PBT_APMRESUMEAUTOMATIC = 0x0004, 0x0007, 0x0012
@@ -168,9 +170,20 @@ class TrayIcon:
         WM_LBUTTONDBLCLK, WM_RBUTTONUP = 0x0203, 0x0205
         NIM_ADD, NIM_DELETE = 0, 2
         taskbar_created = user32.RegisterWindowMessageW("TaskbarCreated")
-        icon = user32.LoadIconW(
-            None, ctypes.cast(ctypes.c_void_p(32512), wintypes.LPCWSTR)
-        )  # IDI_APPLICATION
+        user32.LoadImageW.restype = wintypes.HANDLE
+        user32.LoadImageW.argtypes = [
+            wintypes.HINSTANCE,
+            wintypes.LPCWSTR,
+            wintypes.UINT,
+            ctypes.c_int,
+            ctypes.c_int,
+            wintypes.UINT,
+        ]
+        edge = user32.GetSystemMetrics(49)  # SM_CXSMICON, the tray size for this DPI
+        icon = user32.LoadImageW(None, str(ICON_PATH), 1, edge, edge, 0x10)  # IMAGE_ICON, LR_LOADFROMFILE
+        if not icon:
+            log.warning("Tray icon %s not loaded, using the Windows default", ICON_PATH)
+            icon = user32.LoadIconW(None, ctypes.cast(ctypes.c_void_p(32512), wintypes.LPCWSTR))
 
         def nid() -> NOTIFYICONDATAW:
             data = NOTIFYICONDATAW()

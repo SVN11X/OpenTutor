@@ -12,7 +12,9 @@ OpenTutor Guardian 0.3.0. The panel is in Spanish, this guide is in English. Des
 
 ## First steps
 
-1. Open the panel from the tray icon next to the clock. The Hoy tab lists the first steps.
+1. Open the panel from the tray icon next to the clock, a blue shield with a check. Windows 11 puts new icons
+   behind the arrow (^) next to the clock: drag the shield out of it to keep it always visible.
+   The Hoy tab lists the first steps.
 2. Ajustes, "Qué te pregunto": check the line under "Carpeta del banco". It must say how many questions it
    found. If not, press "Elegir carpeta…" and pick `GCP_Data_Engineer_Fieldnotes` (or its `content` folder).
    The environment variable `GUARDIAN_GCP_BANK` also works.

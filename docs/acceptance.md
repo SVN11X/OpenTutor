@@ -12,7 +12,11 @@
 | Bloqueo FocoLocal | No altera FocoLocal sin contrato validado | No implementado |
 | Revisión de PPTX | Archivo, rúbrica y defensa | No implementado |
 | Inicio automático/tray | Opt-in y salida de emergencia | No implementado |
-| DPI y segundo monitor | Compatible con Windows real | No probado |
+| DPI y segundo monitor | Compatible con Windows real | 125 % probado el 2026-11-16. 150 % y dos monitores sin probar |
+| Todo el día | La sesión arranca al iniciar Guardian y se renueva a medianoche | Test unitario. Arranque real tras reiniciar sin probar |
+| Ventana insistente | Sin salida, vuelve tras cerrar o minimizar, espera en pantalla completa | Tests Tk y prueba en Windows 11 (demo) |
+| Suspensión y bloqueo | El contador no suma tiempo suspendido ni bloqueado | Test de mensajes. Suspensión real sin probar |
+| Instalador | Instala por usuario, inicia y desinstala | Ver PR de la versión 0.3.0 |
 
 ## Cómo probar sin reiniciar la batería histórica
 

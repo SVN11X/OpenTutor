@@ -1,16 +1,16 @@
 VSVersionInfo(
-  ffi=FixedFileInfo(filevers=(0, 2, 0, 0), prodvers=(0, 2, 0, 0), mask=0x3f, flags=0x0, OS=0x40004, fileType=0x1, subtype=0x0, date=(0, 0)),
+  ffi=FixedFileInfo(filevers=(0, 3, 0, 0), prodvers=(0, 3, 0, 0), mask=0x3f, flags=0x0, OS=0x40004, fileType=0x1, subtype=0x0, date=(0, 0)),
   kids=[
     StringFileInfo([
       StringTable('040904B0', [
         StringStruct('CompanyName', 'SVN11X'),
         StringStruct('FileDescription', 'OpenTutor Guardian, a local study quiz agent'),
-        StringStruct('FileVersion', '0.2.0'),
+        StringStruct('FileVersion', '0.3.0'),
         StringStruct('InternalName', 'OpenTutorGuardian'),
         StringStruct('LegalCopyright', 'MIT License'),
         StringStruct('OriginalFilename', 'OpenTutorGuardian.exe'),
         StringStruct('ProductName', 'OpenTutor Guardian'),
-        StringStruct('ProductVersion', '0.2.0')])
+        StringStruct('ProductVersion', '0.3.0')])
     ]),
     VarFileInfo([VarStruct('Translation', [1033, 1200])])
   ]

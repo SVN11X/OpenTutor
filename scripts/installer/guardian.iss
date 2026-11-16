@@ -1,6 +1,6 @@
 ; Inno Setup script. Per-user install, no administrator rights, a normal uninstaller.
 ; Build: scripts\build-installer.ps1
-#define AppVersion "0.2.0"
+#define AppVersion "0.3.0"
 
 [Setup]
 AppId={{B6F0D1B2-6C0E-4B1E-9C55-0F1A5E2C7A11}

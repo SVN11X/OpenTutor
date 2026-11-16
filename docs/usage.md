@@ -55,6 +55,8 @@ OpenTutor Guardian 0.4.0. The panel is in Spanish, this guide is in English. Des
 - Terminar keeps the pending quiz for the next session. Emergencia ends the session, drops the pending quiz
   and forgets the schedule. Salir closes Guardian and keeps the quiz pending.
 - Turn off "Ventana insistente" in Ajustes to get a small notice with "Más tarde" instead.
+- Without a tray icon, every quiz can be postponed, even with "Ventana insistente" on, because the tray
+  menu holds the only exits of an insistent quiz.
 - Uninstall from Windows Settings, Apps. The uninstaller removes the autostart value.
 
 ## Data and privacy

@@ -225,22 +225,21 @@ class GuardianUI:
             text=t("panel.practice_note"),
         ).pack(anchor="w", pady=6)
 
-        # Ajustes: what is asked, then when. Every change saves itself, the line below says when it did.
+        # Ajustes: when first, since its switches are the first steps on Hoy, then what is asked. Every
+        # change saves itself, the line below the scrolled area says when it did.
         ttk.Label(
             settings, textvariable=self.settings_status, foreground="#555555", wraplength=520, justify="left"
-        ).pack(side="bottom", anchor="w", pady=(8, 0))
+        ).pack(side="bottom", anchor="w", pady=(6, 0))
+        ttk.Separator(settings, orient="horizontal").pack(side="bottom", fill="x", pady=(6, 0))
         _canvas, settings_body = scrolled(settings, padding=(0, 0, 8, 0))
-        self.question_panel = QuestionSettingsPanel(
-            settings_body,
-            self.settings_store,
-            self.settings,
-            self._on_settings_saved,
-            self.settings_status.set,
-        )
         when = ttk.LabelFrame(settings_body, text=t("panel.when"), padding=10)
-        when.pack(fill="x")
-        ttk.Label(when, text=t("panel.schedule_label")).pack(anchor="w")
-        ttk.Entry(when, textvariable=self.schedule).pack(fill="x", pady=(2, 8))
+        when.pack(fill="x", pady=(0, 10))
+        ttk.Checkbutton(
+            when,
+            text=t("panel.all_day_check"),
+            variable=self.all_day_var,
+            command=self._toggle_all_day,
+        ).pack(anchor="w")
         ttk.Checkbutton(
             when,
             text=t("panel.autostart_check"),
@@ -249,16 +248,19 @@ class GuardianUI:
         ).pack(anchor="w", pady=(8, 0))
         ttk.Checkbutton(
             when,
-            text=t("panel.all_day_check"),
-            variable=self.all_day_var,
-            command=self._toggle_all_day,
-        ).pack(anchor="w", pady=(8, 0))
-        ttk.Checkbutton(
-            when,
             text=t("panel.insistent_check"),
             variable=self.insistent_var,
             command=self._toggle_insistent,
         ).pack(anchor="w", pady=(8, 0))
+        ttk.Label(when, text=t("panel.schedule_label")).pack(anchor="w", pady=(10, 0))
+        ttk.Entry(when, textvariable=self.schedule).pack(fill="x", pady=(2, 0))
+        self.question_panel = QuestionSettingsPanel(
+            settings_body,
+            self.settings_store,
+            self.settings,
+            self._on_settings_saved,
+            self.settings_status.set,
+        )
 
     def _refresh_stats(self) -> None:
         """Read results from SQLite. Only at start and after a quiz, never every second."""

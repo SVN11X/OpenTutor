@@ -150,8 +150,8 @@ class FormTests(unittest.TestCase):
         self.assertEqual([s.interval_max for s in self.saved], [15])
 
     def test_the_bank_found_by_itself_is_shown_in_its_field_and_saved_empty(self):
-        self.assertEqual(self.panel.bank_var.get(), str(self.bank))
-        self.assertNotIn(str(self.bank), self.panel.bank_text.get())
+        self.assertEqual(Path(self.panel.bank_var.get()), self.bank.resolve())  # CI uses short names
+        self.assertNotIn(self.bank.name, self.panel.bank_text.get())
         self.panel.save()
         self.assertEqual(self.store.load().bank_path, "")
 

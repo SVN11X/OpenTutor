@@ -38,9 +38,13 @@ def find_bank_path(explicit: Path | str | None = None) -> Path | None:
             ]
         )
     for location in locations:
-        candidate = location if location.suffix.lower() == ".json" else location / BANK_FILE
-        if candidate.is_file():
-            return candidate.resolve()
+        if location.suffix.lower() == ".json":
+            candidates = [location]
+        else:  # the repository folder, or its content folder chosen by mistake
+            candidates = [location / BANK_FILE, location / BANK_FILE.name]
+        for candidate in candidates:
+            if candidate.is_file():
+                return candidate.resolve()
     return None
 
 

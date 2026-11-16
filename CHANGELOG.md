@@ -6,6 +6,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Added
 
+- Ajustes, section "Qué te pregunto": question set, source, exam domains, minutes between quizzes, the bank folder with a picker and the Ollama model. Settings are saved in SQLite, so the installed app finds the bank.
 - The clock stops while the computer is suspended or the session is locked, and the panel shows today's active time and why the clock is paused.
 - Markdown and PDF validators (rubrics md-1 and pdf-1) and a kind for each task. The PDF check finds active content also inside compressed streams, with limits against decompression bombs. PDF text cannot be read reliably, so missing terms give needs review and never a rejection.
 - Tareas tab: practical tasks the owner writes by hand (title, slide, section or page count, required terms).

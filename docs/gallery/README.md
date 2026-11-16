@@ -1,6 +1,6 @@
 # Gallery
 
-OpenTutor Guardian 0.4.0 as a user sees it on Windows. Real captures of the program's own
+OpenTutor Guardian 0.5.0 as a user sees it on Windows. Real captures of the program's own
 windows, made by `scripts/gallery.py` with throwaway data and a sample bank made of the 10 backup questions in `src/guardian/questions.py`.
 The bank path in Ajustes is a neutral example, never a folder of the machine that made it.
 The panel text is in Spanish. Regenerate after any interface change, from the repository root:

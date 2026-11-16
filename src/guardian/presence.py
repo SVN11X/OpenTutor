@@ -11,6 +11,8 @@ import logging
 import sys
 from ctypes import wintypes
 
+from .i18n import t
+
 log = logging.getLogger(__name__)
 
 IDLE_LIMIT_SEC = 180
@@ -90,9 +92,9 @@ class Presence:
     def paused_reason(self, active: bool) -> str | None:
         """Why the clock is not counting, in the user's words, or None when it counts."""
         if self.suspended:
-            return "equipo en suspensión"
+            return t("presence.paused_suspended")
         if self.locked:
-            return "pantalla bloqueada"
+            return t("presence.paused_locked")
         if not active:
-            return "sin actividad"
+            return t("presence.paused_idle")
         return None

@@ -11,18 +11,19 @@ from dataclasses import replace
 from tkinter import filedialog, ttk
 
 from . import fieldnotes
+from .i18n import t
 from .settings_store import DOMAIN_IDS, INTERVAL_BOUNDS, QUESTION_SETS, Settings, SettingsStore
 
 log = logging.getLogger(__name__)
 
 SOURCE_LABELS = {
-    "practice": "Todo el banco (práctica, unas 300 preguntas)",
-    "reviewed": "Solo revisadas (pocas, se repiten)",
-    "ollama": "Ollama local (genera preguntas, puede tardar)",
+    "practice": t("settings.source_practice"),
+    "reviewed": t("settings.source_reviewed"),
+    "ollama": t("settings.source_ollama"),
 }
 LANGUAGE_LABELS = {
-    "es": "Español (traducción del banco)",
-    "en": "Inglés (original)",
+    "es": t("settings.language_es"),
+    "en": t("settings.language_en"),
 }
 SET_TOPICS = {"gcp-pde": "Google Cloud Data Engineer"}  # the topic name get_questions knows
 
@@ -36,19 +37,22 @@ def bank_summary(bank_path: str) -> tuple[bool, str]:
     """(found, text for the owner) about the bank folder. Read-only."""
     path = fieldnotes.find_bank_path(bank_path or None)
     if path is None:
-        return False, "✖ No encuentro el banco. Elige la carpeta GCP_Data_Engineer_Fieldnotes."
+        return False, t("settings.bank_missing")
     try:
         practice = len(fieldnotes.load_pool(path, reviewed_only=False))
         reviewed = len(fieldnotes.load_pool(path))
     except (OSError, ValueError) as err:
-        return False, f"✖ El banco no se pudo leer: {err}"
-    return True, f"✔ {practice} preguntas usables, {reviewed} revisadas · {path}"
+        return False, t("settings.bank_read_error", error=err)
+    return True, t("settings.bank_ok", practice=practice, reviewed=reviewed, path=path)
 
 
 def domain_labels(bank_path: str) -> dict[int, str]:
     """Domain id to its label, with the bank's names and weights when the bank has them."""
-    names = {i: f"{i}. {name} ({weight} %)" for i, name, weight in fieldnotes.domain_names(bank_path or None)}
-    return {i: names.get(i, f"Dominio {i}") for i in DOMAIN_IDS}
+    names = {
+        i: t("settings.domain_named", number=i, name=name, weight=weight)
+        for i, name, weight in fieldnotes.domain_names(bank_path or None)
+    }
+    return {i: names.get(i, t("settings.domain_fallback", number=i)) for i in DOMAIN_IDS}
 
 
 class QuestionSettingsPanel:
@@ -73,21 +77,21 @@ class QuestionSettingsPanel:
         self.bank_var = tk.StringVar(value=settings.bank_path)
         self.bank_text = tk.StringVar()
         self.model_var = tk.StringVar(value=settings.model)
-        self.frame = ttk.LabelFrame(parent, text="Qué te pregunto", padding=10)
+        self.frame = ttk.LabelFrame(parent, text=t("settings.section"), padding=10)
         self.frame.pack(fill="x", pady=(0, 10))
         self._build()
 
     def _build(self) -> None:
         f = self.frame
-        ttk.Label(f, text="Conjunto de preguntas:").grid(row=0, column=0, sticky="w")
+        ttk.Label(f, text=t("settings.question_set_label")).grid(row=0, column=0, sticky="w")
         ttk.Combobox(
             f, textvariable=self.set_var, state="readonly", values=list(QUESTION_SETS.values()), width=44
         ).grid(row=0, column=1, columnspan=2, sticky="w", pady=2)
-        ttk.Label(f, text="Origen:").grid(row=1, column=0, sticky="w")
+        ttk.Label(f, text=t("settings.source_label")).grid(row=1, column=0, sticky="w")
         ttk.Combobox(
             f, textvariable=self.source_var, state="readonly", values=list(SOURCE_LABELS.values()), width=44
         ).grid(row=1, column=1, columnspan=2, sticky="w", pady=2)
-        ttk.Label(f, text="Idioma de las preguntas:").grid(row=2, column=0, sticky="w")
+        ttk.Label(f, text=t("settings.language_label")).grid(row=2, column=0, sticky="w")
         ttk.Combobox(
             f,
             textvariable=self.language_var,
@@ -95,28 +99,30 @@ class QuestionSettingsPanel:
             values=list(LANGUAGE_LABELS.values()),
             width=44,
         ).grid(row=2, column=1, columnspan=2, sticky="w", pady=2)
-        ttk.Label(f, text="Dominios del examen:").grid(row=3, column=0, sticky="nw", pady=(6, 0))
+        ttk.Label(f, text=t("settings.domains_label")).grid(row=3, column=0, sticky="nw", pady=(6, 0))
         self.domain_box = ttk.Frame(f)
         self.domain_box.grid(row=3, column=1, columnspan=2, sticky="w", pady=(6, 0))
         self._render_domains()
-        ttk.Label(f, text="Minutos de actividad entre preguntas:").grid(row=4, column=0, sticky="w", pady=6)
+        ttk.Label(f, text=t("settings.interval_label")).grid(row=4, column=0, sticky="w", pady=6)
         span = ttk.Frame(f)
         span.grid(row=4, column=1, columnspan=2, sticky="w")
         low, high = INTERVAL_BOUNDS
-        ttk.Label(span, text="de").pack(side="left")
+        ttk.Label(span, text=t("settings.interval_from")).pack(side="left")
         ttk.Spinbox(span, from_=low, to=high, textvariable=self.min_var, width=5).pack(side="left", padx=4)
-        ttk.Label(span, text="a").pack(side="left")
+        ttk.Label(span, text=t("settings.interval_to")).pack(side="left")
         ttk.Spinbox(span, from_=low, to=high, textvariable=self.max_var, width=5).pack(side="left", padx=4)
-        ttk.Label(span, text="(al azar dentro del rango)").pack(side="left")
-        ttk.Label(f, text="Carpeta del banco:").grid(row=5, column=0, sticky="w")
+        ttk.Label(span, text=t("settings.interval_random")).pack(side="left")
+        ttk.Label(f, text=t("settings.bank_label")).grid(row=5, column=0, sticky="w")
         ttk.Entry(f, textvariable=self.bank_var, width=36).grid(row=5, column=1, sticky="we", pady=2)
-        ttk.Button(f, text="Elegir carpeta…", command=self._choose_bank).grid(row=5, column=2, padx=(6, 0))
+        ttk.Button(f, text=t("settings.choose_folder"), command=self._choose_bank).grid(
+            row=5, column=2, padx=(6, 0)
+        )
         ttk.Label(f, textvariable=self.bank_text, wraplength=500, justify="left").grid(
             row=6, column=0, columnspan=3, sticky="w"
         )
-        ttk.Label(f, text="Modelo Ollama:").grid(row=7, column=0, sticky="w", pady=(6, 0))
+        ttk.Label(f, text=t("settings.model_label")).grid(row=7, column=0, sticky="w", pady=(6, 0))
         ttk.Entry(f, textvariable=self.model_var, width=24).grid(row=7, column=1, sticky="w", pady=(6, 0))
-        ttk.Button(f, text="Guardar ajustes", command=self.save).grid(
+        ttk.Button(f, text=t("settings.save"), command=self.save).grid(
             row=8, column=2, sticky="e", pady=(10, 0)
         )
         f.columnconfigure(1, weight=1)
@@ -133,7 +139,7 @@ class QuestionSettingsPanel:
         self.bank_text.set(text)
 
     def _choose_bank(self) -> None:
-        folder = filedialog.askdirectory(parent=self.frame, title="Carpeta GCP_Data_Engineer_Fieldnotes")
+        folder = filedialog.askdirectory(parent=self.frame, title=t("settings.bank_dialog_title"))
         if folder:
             self.bank_var.set(folder)
             self._refresh_bank()
@@ -144,10 +150,10 @@ class QuestionSettingsPanel:
         try:
             low, high = int(self.min_var.get()), int(self.max_var.get())
         except ValueError:
-            raise ValueError("Los minutos deben ser números enteros") from None
+            raise ValueError(t("settings.error_minutes")) from None
         domains = tuple(i for i, var in self.domain_vars.items() if var.get())
         if not domains:
-            raise ValueError("Marca al menos un dominio del examen")
+            raise ValueError(t("settings.error_no_domains"))
         set_id = next(k for k, v in QUESTION_SETS.items() if v == self.set_var.get())
         source = next(k for k, v in SOURCE_LABELS.items() if v == self.source_var.get())
         language = next(k for k, v in LANGUAGE_LABELS.items() if v == self.language_var.get())
@@ -167,9 +173,9 @@ class QuestionSettingsPanel:
         try:
             saved = self.store.save(self.read())
         except ValueError as err:
-            self.status(f"Ajustes sin guardar: {err}")
+            self.status(t("settings.save_error", error=err))
             return
         self.settings = saved
         self._refresh_bank()
         self.on_saved(saved)
-        self.status("Ajustes guardados")
+        self.status(t("settings.saved"))

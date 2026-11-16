@@ -1,9 +1,9 @@
 # 0006. Windows installer and code signing
 
-- Status: proposed
+- Status: accepted
 - Date: 2026-11-15
 - Proposed by: Claude Code
-- Accepted by: owner (approved the plan in chat, to be confirmed here)
+- Accepted by: owner
 
 ## Context
 Guardian runs from source. Users need an installer, and Windows shows "Unknown publisher" for unsigned programs.

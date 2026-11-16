@@ -1,11 +1,11 @@
 # Usage guide (Windows)
 
-OpenTutor Guardian 0.4.0. The panel is in Spanish, this guide is in English. Design reasons are in
+OpenTutor Guardian 0.5.0. The panel is in Spanish, this guide is in English. Design reasons are in
 [decisions/0007-insistent-quiz-and-all-day-mode.md](decisions/0007-insistent-quiz-and-all-day-mode.md).
 
 ## Install or run
 
-- Installer: run `OpenTutorGuardian-Setup-0.4.0.exe` from `dist\installer\` or a release. No administrator
+- Installer: run `OpenTutorGuardian-Setup-0.5.0.exe` from `dist\installer\` or a release. No administrator
   rights. It is unsigned, so SmartScreen may ask for "More info" and "Run anyway".
 - From source, in Windows PowerShell at the repository root: `.\scripts\run-dev.ps1`. Add `-Hidden` to start
   in the tray, `-Demo` for quizzes after 20 to 30 seconds of activity, `-TestsOnly` to run the tests.
@@ -55,6 +55,8 @@ OpenTutor Guardian 0.4.0. The panel is in Spanish, this guide is in English. Des
 - Terminar keeps the pending quiz for the next session. Emergencia ends the session, drops the pending quiz
   and forgets the schedule. Salir closes Guardian and keeps the quiz pending.
 - Turn off "Ventana insistente" in Ajustes to get a small notice with "Más tarde" instead.
+- Without a tray icon, every quiz can be postponed, even with "Ventana insistente" on, because the tray
+  menu holds the only exits of an insistent quiz.
 - Uninstall from Windows Settings, Apps. The uninstaller removes the autostart value.
 
 ## Data and privacy

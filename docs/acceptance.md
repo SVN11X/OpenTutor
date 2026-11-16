@@ -16,7 +16,7 @@
 | Todo el día | La sesión arranca al iniciar Guardian y se renueva a medianoche | Test unitario. Arranque real tras reiniciar sin probar |
 | Ventana insistente | Sin salida, vuelve tras cerrar o minimizar, espera en pantalla completa | Tests Tk y prueba en Windows 11 (demo) |
 | Suspensión y bloqueo | El contador no suma tiempo suspendido ni bloqueado | Test de mensajes. Suspensión real sin probar |
-| Instalador | Instala por usuario, inicia y desinstala | Instalador 0.4.0 construido el 2026-11-16. Instalación y desinstalación por el dueño |
+| Instalador | Instala por usuario, inicia y desinstala | Instalador 0.5.0 construido el 2026-11-16. Instalación y desinstalación por el dueño |
 
 ## Cómo probar sin reiniciar la batería histórica
 

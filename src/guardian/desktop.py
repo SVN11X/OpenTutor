@@ -106,6 +106,9 @@ class GuardianUI:
         self.autostart_var = tk.BooleanVar(value=autostart.is_enabled())
         self.task_store = TaskStore(app_data / "guardian_mvp.sqlite3")
         self.evidence_panel = EvidencePanel(root, self.task_store, self.status.set)
+        self.commands: queue.Queue[str] = queue.Queue()
+        self.tray = TrayIcon(self.commands.put)
+        self.tray_ok = self.tray.start()
         self._render()
         self._refresh_stats()
         self._restore_session()
@@ -114,9 +117,6 @@ class GuardianUI:
             self._start()  # all-day mode: the owner chose to study from sign-in, decision 0007
         if not self.bank_found and self.settings.source != "ollama":
             self.status.set(t("panel.bank_missing_hint"))
-        self.commands: queue.Queue[str] = queue.Queue()
-        self.tray = TrayIcon(self.commands.put)
-        self.tray_ok = self.tray.start()
         if not self.tray_ok:
             self.status.set(self.status.get() + t("panel.no_tray_suffix"))
         root.after(1000, self._tick)
@@ -292,7 +292,7 @@ class GuardianUI:
             paused_until=self.pause_until if self.pause_until > now else None,
             pending=self.pending,
             in_quiz=self.in_quiz,
-            insistent=self.settings.insistent,
+            insistent=self._insistent(),
             wait=self.wait_reason,
         )
         self.headline_text.set(headline(state, now))
@@ -389,7 +389,7 @@ class GuardianUI:
             self.pause_until = saved.paused_until or _EPOCH
             self.status.set(t("panel.session_restored"))
         if self.pending:
-            if self.enabled and not self.settings.insistent:
+            if self.enabled and not self._insistent():
                 self.root.after(2000, self._surprise_notice)
 
     def _start_text(self) -> str:
@@ -463,6 +463,10 @@ class GuardianUI:
             self.clock = SurpriseClock(interval=self._interval())
         self._persist()
         self._refresh_health(repeat=False)
+
+    def _insistent(self) -> bool:
+        """Insistent mode only with a tray icon: its menu holds the only exits of an insistent quiz."""
+        return self.settings.insistent and self.tray_ok
 
     def _toggle_insistent(self) -> None:
         on = self.insistent_var.get()
@@ -598,10 +602,10 @@ class GuardianUI:
             if due and not self.in_quiz and not self.pending:
                 self.pending = True
                 self._persist()  # the pending exam must survive a restart
-                if not self.settings.insistent:
+                if not self._insistent():
                     self._surprise_notice()  # works with the panel hidden: it is a topmost Toplevel
             self.wait_reason = None
-            if self.pending and self.settings.insistent and not self.in_quiz:
+            if self.pending and self._insistent() and not self.in_quiz:
                 wait = self._insistent_wait(now, now_mono)
                 if wait is None:
                     self._open_quiz(insistent=True)
@@ -694,7 +698,7 @@ class GuardianUI:
                     self.quiz.window.focus_force()
             return
         if insistent is None:
-            insistent = self.pending and self.settings.insistent
+            insistent = self.pending and self._insistent()
         if self.surprise_popup is not None:
             popup = self.surprise_popup
             self.surprise_popup = None

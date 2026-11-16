@@ -172,7 +172,7 @@
   "panel.loading_bank": "Cargando preguntas del banco local…",
   "panel.loading_ollama": "Generando preguntas con Ollama (máximo 30 s)…",
   "panel.no_exams": "Aún no hay exámenes.",
-  "panel.no_tray_suffix": " · sin icono de bandeja: cerrar la ventana sale",
+  "panel.no_tray_suffix": " · sin icono de bandeja: el examen se podrá posponer y cerrar la ventana sale",
   "panel.nothing_to_pause": "No hay sesión activa que pausar",
   "panel.now": "Ahora",
   "panel.pause_15": "Pausar 15 min",

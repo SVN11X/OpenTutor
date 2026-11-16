@@ -6,7 +6,9 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Added
 
-- `docs/gallery/`: screenshots of 16 states of the panel and the quiz windows, shown by GitHub. `scripts/gallery.py` regenerates them with throwaway data and a sample bank, capturing only Guardian's own windows. A `gallery` workflow builds it for every pull request.
+- `docs/gallery/`: screenshots of 16 states of the panel and the quiz windows, shown by GitHub. `scripts/gallery.py` regenerates them with throwaway data and a sample bank, capturing only Guardian's own windows, the same on every run. A `gallery` workflow builds it for every pull request.
+
+## [0.5.0] - 2026-11-16
 
 ### Changed
 
@@ -14,6 +16,11 @@ All notable changes to this project are documented here. The format follows [Kee
 - Hoy says the state once, with the reason when a pending quiz waits, and shows only the buttons that act now, with the main one in bold. A paused session gets a Reanudar button. Emergencia stands apart from Ocultar a bandeja and Salir and says what it does.
 - Ajustes saves every change by itself, with no Guardar button, and scrolls, so the "Cuándo" switches are always reachable. A bank found by itself shows its folder in the "Carpeta del banco" field.
 - The all-day mode is always called "Todo el día". An empty study schedule now reads "a cualquier hora".
+- The Tareas tab scrolls and keeps its controls apart, so "Añadir tarea" stays reachable at 150 percent.
+
+### Fixed
+
+- Without a tray icon, a quiz can always be postponed, even with "Ventana insistente" on, because the tray menu holds the only exits of an insistent quiz (decision 0009).
 
 ## [0.4.0] - 2026-11-16
 

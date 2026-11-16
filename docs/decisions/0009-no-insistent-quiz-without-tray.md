@@ -1,9 +1,9 @@
 # 0009. No insistent quiz without a tray icon
 
-- Status: proposed
+- Status: accepted
 - Date: 2026-11-16
 - Proposed by: Claude Code
-- Accepted by: owner
+- Accepted by: owner, through the authorization given in chat on 2026-11-16
 
 ## Context
 

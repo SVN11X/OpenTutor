@@ -120,6 +120,7 @@ def get_questions(
     bank_path=None,
     cards: Mapping[str, Card] | None = None,
     domains: Sequence[int] = (),
+    language: str = "es",
     now: datetime | None = None,
 ) -> tuple[list[Question], str]:
     """Prefer reviewed local questions; use Ollama only when explicitly requested.
@@ -147,7 +148,7 @@ def get_questions(
     }
     if gcp and mode != "ollama":
         practice = mode == "bank-practice"
-        pool = load_pool(bank_path, reviewed_only=not practice, domains=domains)
+        pool = load_pool(bank_path, reviewed_only=not practice, domains=domains, language=language)
         selected = pick(pool, cards, moment, 5)
         reviewed_count = len(selected)
         if reviewed_count < 5:

@@ -644,6 +644,7 @@ class GuardianUI:
                     bank_path=settings.bank_path or None,
                     cards=cards,
                     domains=settings.domains,
+                    language=settings.language,
                 )
                 self.root.after(0, lambda: self._present_quiz(topic, *result, insistent=insistent))
             except Exception as err:

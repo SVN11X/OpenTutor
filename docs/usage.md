@@ -36,6 +36,8 @@ OpenTutor Guardian 0.3.0. The panel is in Spanish, this guide is in English. Des
 ## What it asks
 
 - Question set: Google Cloud Professional Data Engineer, the only one for now.
+- Language: questions appear in Spanish when the bank has a current translation. "Inglés (original)" shows the
+  English bank instead. A question whose translation is stale stays in English.
 - Source: "Todo el banco (práctica)" uses about 305 questions without images and with one answer. Their keys
   are not reviewed, so results count as practice, never as a certified pass. "Solo revisadas" uses 12
   reviewed questions plus 10 backup ones. "Ollama local" generates questions with a local model and may take

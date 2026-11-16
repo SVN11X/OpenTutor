@@ -31,6 +31,11 @@ def key(prompt: str) -> str:
     return prompt.strip().casefold()
 
 
+def question_key(question: Question) -> str:
+    """A stable id keeps the history when the language changes."""
+    return question.uid or key(question.prompt)
+
+
 def next_card(card: Card | None, correct: bool, now: datetime) -> Card:
     """A wrong answer restarts at box 0, a right one climbs until the last box."""
     if not correct:
@@ -52,7 +57,7 @@ def pick(
     """Return up to k questions: due first (lowest box), then never-seen, then later ones."""
     unique: dict[str, Question] = {}
     for question in pool:
-        unique.setdefault(key(question.prompt), question)
+        unique.setdefault(question_key(question), question)
     due: list[tuple[int, datetime, Question]] = []
     new: list[Question] = []
     later: list[tuple[datetime, Question]] = []

@@ -16,6 +16,7 @@ from pathlib import Path
 log = logging.getLogger(__name__)
 
 SOURCES = ("practice", "reviewed", "ollama")
+LANGUAGES = ("es", "en")
 QUESTION_SETS = {"gcp-pde": "Google Cloud Professional Data Engineer"}
 DOMAIN_IDS = (1, 2, 3, 4, 5)
 INTERVAL_BOUNDS = (2, 240)  # minutes
@@ -30,6 +31,7 @@ _TABLE = """CREATE TABLE IF NOT EXISTS guardian_settings (
 class Settings:
     question_set: str = "gcp-pde"
     source: str = "practice"
+    language: str = "es"  # language of the bank questions, not of the interface
     domains: tuple[int, ...] = ()  # empty means every exam domain
     interval_min: int = 10
     interval_max: int = 25
@@ -49,6 +51,8 @@ def validate(settings: Settings) -> Settings:
         raise ValueError("Conjunto de preguntas desconocido")
     if settings.source not in SOURCES:
         raise ValueError("Origen de preguntas desconocido")
+    if settings.language not in LANGUAGES:
+        raise ValueError("Idioma de preguntas desconocido")
     if any(type(d) is not int or d not in DOMAIN_IDS for d in settings.domains):
         raise ValueError("Dominio del examen inválido")
     low, high = INTERVAL_BOUNDS

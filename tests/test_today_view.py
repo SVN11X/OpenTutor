@@ -49,6 +49,9 @@ class CounterTests(unittest.TestCase):
         self.assertIn("unos 7 min", counter_line(True, None, 180, 600))
         self.assertIn("unos 1 min", counter_line(True, None, 599, 600))
 
+    def test_a_pending_quiz_holds_the_counter(self):
+        self.assertIn("examen pendiente", counter_line(True, None, 600, 600, pending=True))
+
     def test_active_today(self):
         self.assertEqual(active_today(5 * 3600 + 7 * 60 + 59), "Tiempo activo hoy: 5 h 7 min")
 

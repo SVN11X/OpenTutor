@@ -4,6 +4,14 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+
+- `scripts/gallery.py` takes screenshots of 16 states of the panel and the quiz windows, with throwaway data and only Guardian's own windows, and writes an `index.html`. A `gallery` workflow builds it for every pull request.
+
+### Fixed
+
+- With a quiz pending, the counter no longer counts down to a next question. It says it waits for the pending quiz.
+
 ## [0.3.0] - 2026-11-16
 
 ### Added

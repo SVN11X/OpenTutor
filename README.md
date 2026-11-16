@@ -57,6 +57,17 @@ See `docs/` for the usage guide, design notes and audits.
 Requires Python 3.11 or newer with tkinter. The app has no third-party packages. No network except the
 optional local Ollama at `127.0.0.1:11434`. No telemetry.
 
+## Screenshots without opening the app
+
+```
+python scripts/gallery.py
+```
+
+It opens the real panel with throwaway data, invisible and without taking focus, walks through 16 states
+(first run, all day, paused, settings, insistent quiz, result, every tab) and writes PNG files and an
+`index.html` to `build\gallery\`. Only Guardian's own windows are captured. Every pull request also builds
+the gallery on GitHub Actions: open the run of the `gallery` workflow and download the `gallery` artifact.
+
 ## Build an installer
 
 From the repository root, in Windows PowerShell with Python 3.11 and Inno Setup 6 installed:

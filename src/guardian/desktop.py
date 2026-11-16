@@ -204,7 +204,7 @@ class GuardianUI:
         ).pack(anchor="w", pady=6)
 
         # Ajustes: what is asked, then when
-        QuestionSettingsPanel(
+        self.question_panel = QuestionSettingsPanel(
             settings, self.settings_store, self.settings, self._on_settings_saved, self.status.set
         )
         when = ttk.LabelFrame(settings, text="Cuándo", padding=10)
@@ -265,7 +265,9 @@ class GuardianUI:
         )
         self.headline_text.set(headline(state, now))
         self.counter_text.set(
-            counter_line(state.enabled, self.paused_reason, self.clock.eligible, self.clock.target)
+            counter_line(
+                state.enabled, self.paused_reason, self.clock.eligible, self.clock.target, self.pending
+            )
         )
         self.today_text.set(active_today(self.saved_today + self.unsaved_seconds))
         self.pending_text.set(

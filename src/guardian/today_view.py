@@ -35,10 +35,14 @@ def headline(state: AgentState, now: datetime) -> str:
     return f"● Estudiando hasta las {state.until:%H:%M}" if state.until else "● Estudiando"
 
 
-def counter_line(enabled: bool, paused_reason: str | None, eligible: float, target: float) -> str:
+def counter_line(
+    enabled: bool, paused_reason: str | None, eligible: float, target: float, pending: bool = False
+) -> str:
     """How far the next question is, or why the clock is stopped."""
     if not enabled:
         return "Contador detenido: inicia una sesión para recibir preguntas"
+    if pending:
+        return "Contador en espera: vuelve a correr cuando respondas el examen pendiente"
     if paused_reason:
         return f"Contador en pausa: {paused_reason}"
     left = max(0, int(target - eligible))

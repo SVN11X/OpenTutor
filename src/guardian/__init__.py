@@ -1,7 +1,6 @@
-"""Guardian MVP: opt-in study interruptions for OpenTutor fork.
+"""Guardian: opt-in spaced study quizzes on Windows.
 
-The MVP does not enforce OS or browser locks. Those require a separate,
-versioned FocoLocal contract and Windows integration testing.
+It never blocks apps, sites or the browser, and it does not talk to FocoLocal (decision 0010).
 """
 
 __version__ = "0.5.0"

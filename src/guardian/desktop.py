@@ -434,8 +434,7 @@ class GuardianUI:
         self.status.set("")
 
     def _emergency(self) -> None:
-        """Always-available exit: ends the session, drops any pending quiz, forgets saved state.
-        Future FocoLocal leases created by Guardian must also be released here."""
+        """Always-available exit: ends the session, drops any pending quiz, forgets saved state."""
         self.pending = False
         self._stop()
         self.windows = ()

@@ -9,7 +9,7 @@
 | Calificación | 4/5 aprueba, 3/5 reprueba | Test unitario |
 | Persistencia | SQLite conserva resultados tras reinicio | Test unitario |
 | Contingencia Ollama | Fallo sin bloqueo; banco validado solo GCP | Implementado; test de caída real pendiente |
-| Bloqueo FocoLocal | No altera FocoLocal sin contrato validado | No implementado |
+| FocoLocal | Guardian no se relaciona con FocoLocal | Fuera de alcance, decisión 0010 |
 | Revisión de PPTX | Archivo, rúbrica y defensa | No implementado |
 | Inicio automático/tray | Opt-in y salida de emergencia | No implementado |
 | DPI y segundo monitor | Compatible con Windows real | 125 % probado el 2026-11-16. 150 % y dos monitores sin probar |

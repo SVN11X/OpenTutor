@@ -50,9 +50,9 @@ class IntegrationProbeTests(unittest.TestCase):
             integrations.probe_http("x", "http://127.0.0.1:1/", timeout=0.5).state, "disconnected"
         )
 
-    def test_focolocal_never_claims_connection(self):
-        states = {h.name: h.state for h in integrations.check_all(bank_ok=True)}
-        self.assertEqual(states["FocoLocal"], "unavailable")
+    def test_focolocal_is_not_listed(self):
+        names = [h.name for h in integrations.check_all(bank_ok=True)]
+        self.assertNotIn("FocoLocal", names)  # independent apps, decision 0010
 
     def test_label_has_icon_and_text(self):
         self.assertIn("desconectado", integrations.Health("Ollama", "disconnected").text())

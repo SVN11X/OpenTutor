@@ -17,6 +17,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
+from .i18n import t
+
 SCHEMA_VERSION = 1
 log = logging.getLogger(__name__)
 
@@ -201,7 +203,7 @@ def parse_schedule(text: str) -> tuple[tuple[str, str], ...]:
     for part in filter(None, (p.strip() for p in text.split(","))):
         start, sep, end = part.partition("-")
         if not sep:
-            raise ValueError(f"Horario inválido: {part!r}. Use HH:MM-HH:MM")
+            raise ValueError(t("session.invalid_schedule", part=part))
         windows.append((start.strip(), end.strip()))
     return _parse_windows([list(w) for w in windows])
 

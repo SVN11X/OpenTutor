@@ -12,6 +12,7 @@ from datetime import time as clock_time
 from pathlib import Path
 from random import Random, SystemRandom
 
+from .i18n import t
 from .spaced import Card, next_card, question_key
 
 log = logging.getLogger(__name__)
@@ -43,15 +44,15 @@ class Question:
 
     def __post_init__(self) -> None:
         if not isinstance(self.prompt, str) or not self.prompt.strip() or len(self.options) != 4:
-            raise ValueError("Una pregunta requiere enunciado y cuatro opciones")
+            raise ValueError(t("core.question_requires_prompt"))
         if type(self.answer_index) is not int or not 0 <= self.answer_index < 4:
-            raise ValueError("Índice de respuesta inválido")
+            raise ValueError(t("core.invalid_answer_index"))
         if any(not isinstance(x, str) or not x.strip() for x in self.options):
-            raise ValueError("Las opciones deben estar completas")
+            raise ValueError(t("core.options_incomplete"))
         if len({x.strip().casefold() for x in self.options}) != 4:
-            raise ValueError("Las opciones deben ser diferentes")
+            raise ValueError(t("core.options_repeated"))
         if not isinstance(self.explanation, str) or not self.explanation.strip():
-            raise ValueError("Falta una explicación")
+            raise ValueError(t("core.explanation_missing"))
 
     def to_dict(self) -> dict:
         return {
@@ -64,10 +65,10 @@ class Question:
     @classmethod
     def from_dict(cls, data: dict) -> Question:
         if not isinstance(data, dict):
-            raise ValueError("La pregunta debe ser un objeto JSON")
+            raise ValueError(t("core.question_not_object"))
         options = data["options"]
         if not isinstance(options, list) or len(options) != 4:
-            raise ValueError("Las opciones deben ser una lista de cuatro textos")
+            raise ValueError(t("core.options_not_four_texts"))
         return cls(
             prompt=data["prompt"],
             options=tuple(options),
@@ -78,18 +79,18 @@ class Question:
 
 def validate_questions(raw: Sequence[dict], count: int = QUESTIONS_PER_QUIZ) -> list[Question]:
     if not isinstance(raw, list) or len(raw) != count:
-        raise ValueError(f"Se requieren exactamente {count} preguntas")
+        raise ValueError(t("core.exact_questions_needed", count=count))
     questions = [Question.from_dict(item) for item in raw]
     if len({q.prompt.strip().casefold() for q in questions}) != count:
-        raise ValueError("Hay preguntas duplicadas")
+        raise ValueError(t("core.duplicate_questions"))
     return questions
 
 
 def grade(questions: Sequence[Question], answers: Sequence[int]) -> tuple[int, bool]:
     if len(questions) != QUESTIONS_PER_QUIZ or len(answers) != QUESTIONS_PER_QUIZ:
-        raise ValueError("El examen requiere cinco preguntas y cinco respuestas")
+        raise ValueError(t("core.quiz_needs_five"))
     if any(type(a) is not int or a not in range(4) for a in answers):
-        raise ValueError("Respuesta fuera de rango")
+        raise ValueError(t("core.answer_out_of_range"))
     correct = sum(a == q.answer_index for q, a in zip(questions, answers, strict=True))
     return correct, correct >= PASS_COUNT
 
@@ -112,12 +113,12 @@ def within_study_window(now: datetime, windows: Sequence[tuple[str, str]]) -> bo
 
 def _parse_minute(s: str) -> int:
     try:
-        t = clock_time.fromisoformat(s)
-        if len(s) != 5 or t.second or t.microsecond:
+        parsed = clock_time.fromisoformat(s)
+        if len(s) != 5 or parsed.second or parsed.microsecond:
             raise ValueError
-        return t.hour * 60 + t.minute
+        return parsed.hour * 60 + parsed.minute
     except (TypeError, ValueError):
-        raise ValueError("Horario inválido, use HH:MM") from None
+        raise ValueError(t("core.invalid_schedule")) from None
 
 
 class SurpriseClock:
@@ -130,7 +131,7 @@ class SurpriseClock:
     ) -> None:
         low, high = interval
         if low < 1 or high < low:
-            raise ValueError("Intervalo inválido")
+            raise ValueError(t("core.invalid_interval"))
         self.rng = rng if rng is not None else SystemRandom()
         self.interval = interval
         self.target = self.rng.randint(low, high)
@@ -139,7 +140,7 @@ class SurpriseClock:
 
     def tick(self, elapsed_seconds: float, *, active: bool, allowed: bool, protected: bool = False) -> bool:
         if elapsed_seconds < 0:
-            raise ValueError("Tiempo negativo")
+            raise ValueError(t("core.negative_elapsed"))
         if self.surprise_due:
             return True
         if active and allowed and not protected:
@@ -297,5 +298,5 @@ def _aware_or_none(value: object) -> datetime | None:
 def attempt_label(score: int, certified_pass: bool, source: str) -> str:
     """Icon + text, never color alone. Unverified sources are practice, whatever the score."""
     if source not in CERTIFIED_QUESTION_SOURCES:
-        return f"◐ Práctica ({score}/5, sin verificar)"
-    return f"✔ Aprobado ({score}/5)" if certified_pass else f"✖ Repasar ({score}/5)"
+        return t("core.attempt_practice", score=score)
+    return t("core.attempt_pass", score=score) if certified_pass else t("core.attempt_review", score=score)

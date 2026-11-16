@@ -13,6 +13,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
+from .i18n import t
+
 MAX_TITLE = 120
 MAX_TERMS = 10
 MAX_TERM_LENGTH = 40
@@ -91,11 +93,11 @@ def clean_terms(raw: str | list[str] | tuple[str, ...]) -> tuple[str, ...]:
         if not term:
             continue
         if len(term) > MAX_TERM_LENGTH:
-            raise ValueError(f"Cada término admite hasta {MAX_TERM_LENGTH} caracteres")
+            raise ValueError(t("tasks.term_too_long", limit=MAX_TERM_LENGTH))
         if term.casefold() not in {t.casefold() for t in terms}:
             terms.append(term)
     if len(terms) > MAX_TERMS:
-        raise ValueError(f"Hasta {MAX_TERMS} términos por tarea")
+        raise ValueError(t("tasks.too_many_terms", limit=MAX_TERMS))
     return tuple(terms)
 
 
@@ -127,12 +129,12 @@ class TaskStore:
     ) -> int:
         """expected_slides is the number of slides, sections or pages, depending on kind."""
         if kind not in KINDS:
-            raise ValueError("Tipo de tarea desconocido")
+            raise ValueError(t("tasks.unknown_kind"))
         title = title.strip()
         if not title or len(title) > MAX_TITLE:
-            raise ValueError(f"El título es obligatorio y admite hasta {MAX_TITLE} caracteres")
+            raise ValueError(t("tasks.invalid_title", limit=MAX_TITLE))
         if type(expected_slides) is not int or not 1 <= expected_slides <= 100:
-            raise ValueError("Las diapositivas deben ser un número entre 1 y 100")
+            raise ValueError(t("tasks.invalid_slides"))
         cleaned = clean_terms(terms)
         with closing(self._connect()) as con, con:
             cur = con.execute(
@@ -179,7 +181,7 @@ class TaskStore:
                 "SELECT rubric_status FROM guardian_submissions WHERE id = ?", (submission_id,)
             ).fetchone()
             if row is None:
-                raise ValueError("Entrega desconocida")
+                raise ValueError(t("tasks.unknown_submission"))
             status = final_status(row[0], score, total)
             con.execute(
                 "UPDATE guardian_submissions SET defense_score = ?, defense_total = ?, final_status = ?"

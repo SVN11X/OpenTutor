@@ -10,7 +10,7 @@ Status: draft.
 2. The user starts a study session, optionally with a schedule. Nothing runs before this.
 3. Every second the clock adds eligible seconds, only while the user is active, inside the schedule and not paused. Suspension and a locked session stop it, through Windows messages on the hidden tray window. The panel shows today's active time.
 4. After 10 to 25 eligible minutes a small topmost notice appears without taking keyboard focus. One quiz stays pending at a time.
-5. The user answers five questions from the local bank. Four correct from a reviewed source is a certified pass.
+5. The user answers five questions chosen by spaced repetition from the local bank, so wrong answers return sooner and the bank does not run out. Four correct from a reviewed source is a certified pass.
 6. The result is stored in SQLite and shown in the Repasos and Progreso tabs. Unverified sources are marked as practice.
 7. Emergency ends the session and removes the saved session. Exit closes the agent.
 

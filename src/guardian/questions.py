@@ -8,11 +8,14 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Mapping, Sequence
+from datetime import UTC, datetime
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from .core import Question, validate_questions
-from .fieldnotes import reviewed_questions
+from .fieldnotes import load_pool
+from .spaced import Card, key, pick
 
 log = logging.getLogger(__name__)
 
@@ -115,17 +118,26 @@ def get_questions(
     *,
     mode: str = "bank-first",
     bank_path=None,
+    cards: Mapping[str, Card] | None = None,
+    domains: Sequence[int] = (),
+    now: datetime | None = None,
 ) -> tuple[list[Question], str]:
     """Prefer reviewed local questions; use Ollama only when explicitly requested.
 
     Modes: 'bank-first', 'bank-only', 'bank-practice' use local Fieldnotes; 'ollama'
     requests generation. The local bank is read-only and not automatically
-    downloaded. Remote Ollama endpoints are forbidden by this MVP.
+    downloaded. Remote Ollama endpoints are forbidden by this MVP. Without cards,
+    recent prompts are deprioritized; with cards, the scheduler decides spacing.
     """
     if endpoint not in ("http://127.0.0.1:11434", "http://localhost:11434"):
         raise ValueError("Solo se permite Ollama local en este MVP")
     if mode not in {"bank-first", "bank-only", "bank-practice", "ollama"}:
         raise ValueError("Modo de preguntas inválido")
+    if cards is None:
+        # A far-future due date pushes recent prompts to the very end of the pool,
+        # so they are avoided while anything else exists but never exhaust the bank.
+        cards = {key(p): Card(box=0, due_at=datetime.max.replace(tzinfo=UTC)) for p in recent}
+    moment = now if now is not None else datetime.now().astimezone()
 
     gcp = topic.strip().casefold() in {
         "google cloud",
@@ -135,18 +147,18 @@ def get_questions(
     }
     if gcp and mode != "ollama":
         practice = mode == "bank-practice"
-        selected = reviewed_questions(recent, bank_path=bank_path, limit=5, reviewed_only=not practice)
+        pool = load_pool(bank_path, reviewed_only=not practice, domains=domains)
+        selected = pick(pool, cards, moment, 5)
         reviewed_count = len(selected)
-        if len(selected) == 5:
-            return selected, "fieldnotes-practice-unverified" if practice else "fieldnotes-reviewed"
-        # Small curated fallback; never recycle prompts already answered.
-        fallback = [q for q in FALLBACK_GCP if q.prompt.strip().casefold() not in recent]
-        used = {candidate.prompt.strip().casefold() for candidate in selected}
-        available = [q for q in fallback if q.prompt.strip().casefold() not in used]
-        selected.extend(available[: 5 - len(selected)])
+        if reviewed_count < 5:
+            used = {key(q.prompt) for q in selected}
+            remaining = [q for q in FALLBACK_GCP if key(q.prompt) not in used]
+            selected.extend(pick(remaining, cards, moment, 5 - reviewed_count))
         if len(selected) == 5:
             if practice and reviewed_count:
                 return selected, "fieldnotes-practice-unverified"
+            if reviewed_count == 5:
+                return selected, "fieldnotes-reviewed"
             return selected, "fieldnotes+fallback-reviewed" if reviewed_count else "fallback-reviewed"
         raise RuntimeError("No quedan cinco preguntas disponibles sin repetir; revisa tu banco Fieldnotes")
     if mode in {"bank-only", "bank-practice"}:
@@ -199,9 +211,9 @@ def get_questions(
             raise RuntimeError(
                 "Ollama no respondió con preguntas válidas para este tema; no hay banco revisado"
             ) from None
-        available = [q for q in FALLBACK_GCP if q.prompt.strip().casefold() not in recent]
+        available = pick(FALLBACK_GCP, cards, moment, 5)
         if len(available) < 5:
             raise RuntimeError(
                 "Banco revisado agotado; se requiere generar y revisar preguntas nuevas"
             ) from None
-        return available[:5], "fallback-reviewed"
+        return available, "fallback-reviewed"

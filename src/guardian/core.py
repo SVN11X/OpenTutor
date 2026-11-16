@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import sqlite3
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -10,6 +11,10 @@ from datetime import datetime
 from datetime import time as clock_time
 from pathlib import Path
 from random import Random, SystemRandom
+
+from .spaced import Card, next_card
+
+log = logging.getLogger(__name__)
 
 MIN_INTERVAL_SECONDS = 10 * 60
 MAX_INTERVAL_SECONDS = 25 * 60
@@ -162,11 +167,26 @@ class ResultStore:
             passed INTEGER NOT NULL CHECK (passed IN (0, 1)),
             source TEXT NOT NULL
         )""")
+        self.con.execute("""CREATE TABLE IF NOT EXISTS guardian_cards (
+            prompt_key TEXT PRIMARY KEY,
+            box INTEGER NOT NULL CHECK (box >= 0),
+            due_at TEXT NOT NULL,
+            seen INTEGER NOT NULL,
+            wrong INTEGER NOT NULL
+        )""")
         self.con.commit()
 
     def record(
-        self, *, topic: str, questions: Sequence[Question], answers: Sequence[int], source: str
+        self,
+        *,
+        topic: str,
+        questions: Sequence[Question],
+        answers: Sequence[int],
+        source: str,
+        now: datetime | None = None,
     ) -> tuple[int, bool]:
+        # One timestamp for the attempt and its card updates keeps both consistent.
+        timestamp = now if now is not None else datetime.now().astimezone()
         score, passed = grade(questions, answers)
         # Never award an unlock-eligible pass from source keys awaiting review.
         certified_pass = passed and source in CERTIFIED_QUESTION_SOURCES
@@ -176,7 +196,7 @@ class ResultStore:
                 (created_at, topic, question_prompts_json, answers_json, score, passed, source)
                 VALUES (?, ?, ?, ?, ?, ?, ?)""",
                 (
-                    datetime.now().astimezone().isoformat(timespec="seconds"),
+                    timestamp.isoformat(timespec="seconds"),
                     topic,
                     json.dumps([q.prompt for q in questions], ensure_ascii=False),
                     json.dumps(list(answers)),
@@ -185,7 +205,51 @@ class ResultStore:
                     source,
                 ),
             )
+            for question, answer in zip(questions, answers, strict=True):
+                correct = answer == question.answer_index
+                prompt_key = question.prompt.strip().casefold()
+                card, seen, wrong = self._existing_card(prompt_key)
+                updated = next_card(card, correct, timestamp)
+                self.con.execute(
+                    """INSERT INTO guardian_cards
+                    (prompt_key, box, due_at, seen, wrong)
+                    VALUES (?, ?, ?, ?, ?)
+                    ON CONFLICT(prompt_key) DO UPDATE SET
+                        box=excluded.box, due_at=excluded.due_at, seen=excluded.seen, wrong=excluded.wrong""",
+                    (
+                        prompt_key,
+                        updated.box,
+                        updated.due_at.isoformat(),
+                        seen + 1,
+                        wrong + (0 if correct else 1),
+                    ),
+                )
         return score, certified_pass
+
+    def _existing_card(self, prompt_key: str) -> tuple[Card | None, int, int]:
+        """Stored card plus its counters; a corrupt due_at loses progress, never data."""
+        row = self.con.execute(
+            "SELECT box, due_at, seen, wrong FROM guardian_cards WHERE prompt_key = ?", (prompt_key,)
+        ).fetchone()
+        if row is None:
+            return None, 0, 0
+        due = _aware_or_none(row[1])
+        if due is None:
+            log.warning("Unreadable due_at in guardian_cards for %s", prompt_key)
+        return (None if due is None else Card(box=row[0], due_at=due)), row[2], row[3]
+
+    def cards(self) -> dict[str, Card]:
+        """Every stored scheduling card, keyed by normalized prompt."""
+        result: dict[str, Card] = {}
+        for prompt_key, box, due_at in self.con.execute(
+            "SELECT prompt_key, box, due_at FROM guardian_cards"
+        ).fetchall():
+            due = _aware_or_none(due_at)
+            if due is None:
+                log.warning("Skipping guardian_cards row with unreadable due_at: %s", prompt_key)
+                continue
+            result[prompt_key] = Card(box=box, due_at=due)
+        return result
 
     def recent_prompts(self, limit: int = 20) -> set[str]:
         rows = self.con.execute(
@@ -213,6 +277,18 @@ class ResultStore:
 
     def close(self) -> None:
         self.con.close()
+
+
+def _aware_or_none(value: object) -> datetime | None:
+    """A stored due date, or None when it is not text, does not parse or has no time zone.
+
+    A naive date would make the comparison with the current time raise inside the quiz thread.
+    """
+    try:
+        parsed = datetime.fromisoformat(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed.tzinfo is not None else None
 
 
 def attempt_label(score: int, certified_pass: bool, source: str) -> str:

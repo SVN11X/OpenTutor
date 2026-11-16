@@ -458,7 +458,7 @@ class GuardianUI:
 
         def work() -> None:
             try:
-                result = get_questions(topic, recent, model, mode=mode)
+                result = get_questions(topic, recent, model, mode=mode, cards=self.store.cards())
                 self.root.after(0, lambda: self._present_quiz(topic, *result))
             except Exception as err:
                 msg = str(err)

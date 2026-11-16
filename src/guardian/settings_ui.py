@@ -138,7 +138,7 @@ class QuestionSettingsPanel:
         set_id = next(k for k, v in QUESTION_SETS.items() if v == self.set_var.get())
         source = next(k for k, v in SOURCE_LABELS.items() if v == self.source_var.get())
         return replace(
-            self.settings,
+            self.store.load(),  # other sections save their own fields, never overwrite them here
             question_set=set_id,
             source=source,
             domains=() if len(domains) == len(DOMAIN_IDS) else domains,

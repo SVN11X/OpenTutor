@@ -4,6 +4,7 @@ import json
 import tempfile
 import tkinter as tk
 import unittest
+from dataclasses import replace
 from pathlib import Path
 from tkinter import ttk
 
@@ -96,6 +97,11 @@ class FormTests(unittest.TestCase):
         self.panel.save()
         self.assertEqual(self.saved[-1].domains, (2, 3, 4, 5))
         self.assertEqual((self.saved[-1].interval_min, self.saved[-1].interval_max), (15, 40))
+
+    def test_saving_the_section_keeps_settings_saved_elsewhere(self):
+        self.store.save(replace(DEFAULTS, all_day=True))
+        self.panel.save()
+        self.assertTrue(self.store.load().all_day)
 
     def test_bad_input_is_reported_and_not_saved(self):
         for domain in self.panel.domain_vars.values():

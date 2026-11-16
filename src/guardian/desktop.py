@@ -20,13 +20,7 @@ from tkinter import messagebox, ttk
 
 from . import autostart, fieldnotes, integrations
 from .activity_log import ActivityLog
-from .core import (
-    CERTIFIED_QUESTION_SOURCES,
-    ResultStore,
-    SurpriseClock,
-    attempt_label,
-    within_study_window,
-)
+from .core import ResultStore, SurpriseClock, attempt_label, within_study_window
 from .evidence_ui import EvidencePanel
 from .i18n import t
 from .logging_setup import setup_logging
@@ -36,11 +30,12 @@ from .quiz_window import QuizWindow
 from .results_ui import show_exam_result
 from .session_state import SessionState, SessionStore, parse_schedule
 from .settings_store import Settings, SettingsStore
-from .settings_ui import SET_TOPICS, QuestionSettingsPanel, bank_summary, quiz_mode
+from .settings_ui import SAVE_DELAY_MS, SET_TOPICS, QuestionSettingsPanel, bank_summary, quiz_mode
 from .single_instance import SingleInstance
 from .task_store import TaskStore
-from .today_view import AgentState, active_today, counter_line, headline, setup_steps
+from .today_view import AgentState, actions, active_today, counter_line, headline, setup_steps
 from .tray import ICON_PATH, TrayIcon
+from .widgets import primary_style, scrolled
 
 
 class GuardianUI:
@@ -79,6 +74,8 @@ class GuardianUI:
         self.last_tick = time.monotonic()
         # Grace after start so the desktop loads before an insistent quiz, and backoff after a failure.
         self.retry_at = self.last_tick + (5 if demo else 60)
+        self.retry_reason = t("panel.wait_startup")
+        self.wait_reason: str | None = None  # why the pending insistent quiz waits, for the headline
         self.insistent_var = tk.BooleanVar(value=self.settings.insistent)
         self.presence = Presence()
         self.paused_reason: str | None = None
@@ -88,7 +85,10 @@ class GuardianUI:
         self.saved_today = self.activity.seconds_on(self.activity_day)
         # The user explicitly activates a bounded study session; no surprise outside it.
         self.until: datetime | None = None
-        self.status = tk.StringVar(value="")
+        self.status = tk.StringVar(value="")  # what an action just did, never the state
+        self.settings_status = tk.StringVar(value=t("settings.autosave_note"))
+        self.shown_actions: tuple | None = None
+        self.schedule_job: str | None = None
         self.headline_text = tk.StringVar(value="")
         self.counter_text = tk.StringVar(value="")
         self.today_text = tk.StringVar(value="")
@@ -109,6 +109,7 @@ class GuardianUI:
         self._render()
         self._refresh_stats()
         self._restore_session()
+        self.schedule.trace_add("write", self._schedule_changed)
         if self.settings.all_day and not self.enabled:
             self._start()  # all-day mode: the owner chose to study from sign-in, decision 0007
         if not self.bank_found and self.settings.source != "ollama":
@@ -145,45 +146,63 @@ class GuardianUI:
             self.tabs.add(page, text=name)
         self.tabs.enable_traversal()  # Ctrl+Tab and Ctrl+PgUp/PgDn
 
-        # Hoy: what Guardian is doing, the controls, first steps, then the always-visible exits
+        # Hoy: the state once, the buttons for it, first steps, then Emergencia apart from the exits
         now_box = ttk.LabelFrame(today, text=t("panel.now"), padding=10)
-        now_box.pack(fill="x")
-        ttk.Label(
-            now_box, textvariable=self.headline_text, foreground="#1a4f8a", font=("Segoe UI", 12, "bold")
-        ).pack(anchor="w")
-        ttk.Label(now_box, textvariable=self.counter_text).pack(anchor="w", pady=(6, 0))
-        ttk.Label(now_box, textvariable=self.today_text).pack(anchor="w", pady=(2, 8))
-        controls = ttk.Frame(now_box)
-        controls.pack(anchor="w")
-        ttk.Button(controls, textvariable=self.start_label, command=self._start).pack(
-            side="left", padx=(0, 7)
+        now_box.pack(fill="x", pady=(0, 10))
+        headline_label = ttk.Label(
+            now_box,
+            textvariable=self.headline_text,
+            foreground="#1a4f8a",
+            font=("Segoe UI", 12, "bold"),
+            wraplength=520,
+            justify="left",
         )
-        ttk.Button(controls, text=t("panel.pause_15"), command=self._pause).pack(side="left", padx=(0, 7))
-        ttk.Button(controls, text=t("panel.stop"), command=self._stop).pack(side="left", padx=(0, 7))
-        ttk.Button(controls, text=t("panel.start_quiz"), command=self._open_quiz).pack(side="left")
-        ttk.Label(today, textvariable=self.last_result).pack(anchor="w", pady=(10, 0))
-        ttk.Label(today, textvariable=self.status, foreground="#555555", wraplength=520, justify="left").pack(
-            anchor="w", pady=(4, 10)
+        headline_label.pack(anchor="w")
+        counter = ttk.Label(now_box, textvariable=self.counter_text)
+        facts = ttk.Frame(now_box)
+        facts.pack(anchor="w", pady=(6, 8))
+        ttk.Label(facts, textvariable=self.today_text).pack(side="left")
+        ttk.Label(facts, text="  ·  ").pack(side="left")
+        ttk.Label(facts, textvariable=self.last_result).pack(side="left")
+        self.controls = ttk.Frame(now_box)
+        self.controls.pack(anchor="w")
+        feedback = ttk.Label(
+            now_box, textvariable=self.status, foreground="#555555", wraplength=520, justify="left"
         )
+        _pack_when_text(counter, self.counter_text, anchor="w", pady=(6, 0), after=headline_label)
+        _pack_when_text(feedback, self.status, anchor="w", pady=(8, 0), after=self.controls)
         self.guide_box = ttk.LabelFrame(today, text=t("panel.first_steps"), padding=10)
-        self.guide_rows = ttk.Frame(self.guide_box)
-        self.guide_rows.pack(fill="x")
+        # The guide's buttons stand beside its steps, so the tab fits a 600 px high window.
         guide_actions = ttk.Frame(self.guide_box)
-        guide_actions.pack(anchor="e", pady=(6, 0))
+        guide_actions.pack(side="right", anchor="n", padx=(8, 0))
         ttk.Button(guide_actions, text=t("panel.go_settings"), command=lambda: self.tabs.select(5)).pack(
-            side="left", padx=(0, 7)
+            fill="x"
         )
-        ttk.Button(guide_actions, text=t("panel.hide_guide"), command=self._hide_guide).pack(side="left")
+        ttk.Button(guide_actions, text=t("panel.hide_guide"), command=self._hide_guide).pack(
+            fill="x", pady=(8, 0)
+        )
+        self.guide_rows = ttk.Frame(self.guide_box)
+        self.guide_rows.pack(side="left", fill="x", expand=True)
         bottom = ttk.Frame(today)
         bottom.pack(side="bottom", fill="x")
         ttk.Label(
             bottom, textvariable=self.health, foreground="#555555", wraplength=520, justify="left"
         ).pack(anchor="w", pady=(0, 6))
-        row = ttk.Frame(bottom)
-        row.pack(anchor="w")
-        ttk.Button(row, text=t("panel.emergency"), command=self._emergency).pack(side="left", padx=(0, 7))
-        ttk.Button(row, text=t("panel.hide_to_tray"), command=self._hide).pack(side="left", padx=(0, 7))
-        ttk.Button(row, text=t("panel.exit"), command=self._exit).pack(side="left")
+        ttk.Separator(bottom, orient="horizontal").pack(fill="x", pady=(0, 8))
+        rescue = ttk.Frame(bottom)
+        rescue.pack(fill="x")
+        emergency = ttk.Button(rescue, text=t("panel.emergency"), command=self._emergency)
+        emergency.pack(side="left", anchor="n")
+        help_text = ttk.Label(rescue, text=t("panel.emergency_help"), foreground="#555555", justify="left")
+        help_text.pack(side="left", padx=(8, 0))
+        rescue.bind(
+            "<Configure>",
+            lambda e: help_text.configure(wraplength=max(200, e.width - emergency.winfo_width() - 16)),
+        )
+        exits = ttk.Frame(bottom)
+        exits.pack(fill="x", pady=(8, 0))
+        ttk.Button(exits, text=t("panel.exit"), command=self._exit).pack(side="right")
+        ttk.Button(exits, text=t("panel.hide_to_tray"), command=self._hide).pack(side="right", padx=(0, 8))
 
         # Tareas and Evidencia: written by the owner, checked by a deterministic rubric
         self.evidence_panel.build_tasks_tab(tasks)
@@ -206,32 +225,42 @@ class GuardianUI:
             text=t("panel.practice_note"),
         ).pack(anchor="w", pady=6)
 
-        # Ajustes: what is asked, then when
-        self.question_panel = QuestionSettingsPanel(
-            settings, self.settings_store, self.settings, self._on_settings_saved, self.status.set
-        )
-        when = ttk.LabelFrame(settings, text=t("panel.when"), padding=10)
-        when.pack(fill="x")
-        ttk.Label(when, text=t("panel.schedule_label")).pack(anchor="w")
-        ttk.Entry(when, textvariable=self.schedule).pack(fill="x", pady=(0, 6))
-        ttk.Checkbutton(
-            when,
-            text=t("panel.autostart_check"),
-            variable=self.autostart_var,
-            command=self._toggle_autostart,
-        ).pack(anchor="w")
+        # Ajustes: when first, since its switches are the first steps on Hoy, then what is asked. Every
+        # change saves itself, the line below the scrolled area says when it did.
+        ttk.Label(
+            settings, textvariable=self.settings_status, foreground="#555555", wraplength=520, justify="left"
+        ).pack(side="bottom", anchor="w", pady=(6, 0))
+        ttk.Separator(settings, orient="horizontal").pack(side="bottom", fill="x", pady=(6, 0))
+        _canvas, settings_body = scrolled(settings, padding=(0, 0, 8, 0))
+        when = ttk.LabelFrame(settings_body, text=t("panel.when"), padding=10)
+        when.pack(fill="x", pady=(0, 10))
         ttk.Checkbutton(
             when,
             text=t("panel.all_day_check"),
             variable=self.all_day_var,
             command=self._toggle_all_day,
-        ).pack(anchor="w", pady=(4, 0))
+        ).pack(anchor="w")
+        ttk.Checkbutton(
+            when,
+            text=t("panel.autostart_check"),
+            variable=self.autostart_var,
+            command=self._toggle_autostart,
+        ).pack(anchor="w", pady=(8, 0))
         ttk.Checkbutton(
             when,
             text=t("panel.insistent_check"),
             variable=self.insistent_var,
             command=self._toggle_insistent,
-        ).pack(anchor="w", pady=(4, 0))
+        ).pack(anchor="w", pady=(8, 0))
+        ttk.Label(when, text=t("panel.schedule_label")).pack(anchor="w", pady=(10, 0))
+        ttk.Entry(when, textvariable=self.schedule).pack(fill="x", pady=(2, 0))
+        self.question_panel = QuestionSettingsPanel(
+            settings_body,
+            self.settings_store,
+            self.settings,
+            self._on_settings_saved,
+            self.settings_status.set,
+        )
 
     def _refresh_stats(self) -> None:
         """Read results from SQLite. Only at start and after a quiz, never every second."""
@@ -263,6 +292,8 @@ class GuardianUI:
             paused_until=self.pause_until if self.pause_until > now else None,
             pending=self.pending,
             in_quiz=self.in_quiz,
+            insistent=self.settings.insistent,
+            wait=self.wait_reason,
         )
         self.headline_text.set(headline(state, now))
         self.counter_text.set(
@@ -272,7 +303,42 @@ class GuardianUI:
         )
         self.today_text.set(active_today(self.saved_today + self.unsaved_seconds))
         self.pending_text.set(t("panel.pending_exam") if self.pending else t("panel.pending_exam_none"))
+        self._render_actions(state, now)
         self._refresh_guide()
+
+    def _render_actions(self, state: AgentState, now: datetime) -> None:
+        """Show only the buttons that do something now, the main one marked. Rebuilt on a change only."""
+        wanted = (tuple(actions(state, now)), state.in_quiz, self.start_label.get())
+        if wanted == self.shown_actions:
+            return
+        self.shown_actions = wanted
+        try:
+            focused = str(self.root.focus_get() or "").startswith(f"{self.controls}.")
+        except (KeyError, tk.TclError):  # focus in a popup Tk does not name
+            focused = False
+        commands = {
+            "start": self._start,
+            "quiz": self._open_quiz,
+            "pause": self._pause,
+            "resume": self._resume,
+            "stop": self._stop,
+        }
+        labels = {
+            "start": self.start_label.get(),
+            "quiz": t("panel.back_to_quiz") if state.in_quiz else t("panel.start_quiz"),
+            "pause": t("panel.pause_15"),
+            "resume": t("panel.resume"),
+            "stop": t("panel.stop"),
+        }
+        for child in self.controls.winfo_children():
+            child.destroy()
+        for name, main in wanted[0]:
+            button = ttk.Button(self.controls, text=labels[name], command=commands[name])
+            if main:
+                button.configure(style=primary_style(self.root), default="active")
+                if focused:  # the button pressed is gone, keep the keyboard in the same place
+                    button.focus_set()
+            button.pack(side="left", padx=(0, 8))
 
     def _refresh_guide(self) -> None:
         steps = setup_steps(
@@ -323,7 +389,6 @@ class GuardianUI:
             self.pause_until = saved.paused_until or _EPOCH
             self.status.set(t("panel.session_restored"))
         if self.pending:
-            self.status.set(t("panel.pending_from_restart"))
             if self.enabled and not self.settings.insistent:
                 self.root.after(2000, self._surprise_notice)
 
@@ -342,10 +407,7 @@ class GuardianUI:
         self.until = session_end(now, all_day=self.settings.all_day)
         self.pause_until = _EPOCH
         self._persist()
-        if self.settings.all_day:
-            self.status.set(t("panel.status_all_day"))
-        else:
-            self.status.set(t("panel.status_studying"))
+        self.status.set("")
 
     def _pause(self) -> None:
         if not self.enabled:
@@ -353,7 +415,13 @@ class GuardianUI:
             return
         self.pause_until = _now() + timedelta(minutes=15)
         self._persist()
-        self.status.set(t("panel.paused"))
+        self.status.set("")
+
+    def _resume(self) -> None:
+        """End a pause early. The session and its end time stay as they were."""
+        self.pause_until = _EPOCH
+        self._persist()
+        self.status.set("")
 
     def _stop(self, by_user: bool = True) -> None:
         """End the session. A pending quiz stays pending: only Emergencia drops it (decision 0007)."""
@@ -363,7 +431,7 @@ class GuardianUI:
         self.clock.reset_after_quiz()
         self._close_quiz()
         self._persist()
-        self.status.set(t("panel.session_stopped_pending") if self.pending else t("panel.session_stopped"))
+        self.status.set("")
 
     def _emergency(self) -> None:
         """Always-available exit: ends the session, drops any pending quiz, forgets saved state.
@@ -402,9 +470,9 @@ class GuardianUI:
             self.settings = self.settings_store.save(replace(self.settings_store.load(), insistent=on))
         except (ValueError, OSError) as err:
             self.insistent_var.set(self.settings.insistent)
-            self.status.set(t("panel.save_error", error=err))
+            self.settings_status.set(t("panel.save_error", error=err))
             return
-        self.status.set(t("panel.insistent_on") if on else t("panel.insistent_off"))
+        self.settings_status.set(t("panel.insistent_on") if on else t("panel.insistent_off"))
 
     def _toggle_all_day(self) -> None:
         """Save the all-day choice. Turning it on also turns on autostart, or it cannot start at sign-in."""
@@ -413,7 +481,7 @@ class GuardianUI:
             self.settings = self.settings_store.save(replace(self.settings_store.load(), all_day=on))
         except (ValueError, OSError) as err:
             self.all_day_var.set(self.settings.all_day)
-            self.status.set(t("panel.save_error", error=err))
+            self.settings_status.set(t("panel.save_error", error=err))
             return
         self.start_label.set(self._start_text())
         if on and not self.autostart_var.get():
@@ -424,19 +492,38 @@ class GuardianUI:
         elif on and self.until is not None:
             self.until = session_end(_now(), all_day=True)
             self._persist()
-        self.status.set(t("panel.all_day_on") if on else t("panel.all_day_off"))
+        self.settings_status.set(t("panel.all_day_on") if on else t("panel.all_day_off"))
 
     def _toggle_autostart(self) -> None:
         try:
             if self.autostart_var.get():
                 autostart.enable(_REPO_ROOT)
-                self.status.set(t("panel.autostart_on"))
+                self.settings_status.set(t("panel.autostart_on"))
             else:
                 autostart.disable()
-                self.status.set(t("panel.autostart_off"))
+                self.settings_status.set(t("panel.autostart_off"))
         except OSError as err:
             self.autostart_var.set(autostart.is_enabled())
-            self.status.set(t("panel.autostart_error", error=err))
+            self.settings_status.set(t("panel.autostart_error", error=err))
+
+    def _schedule_changed(self, *_args: object) -> None:
+        """Save the study hours a moment after the last keystroke, like every other setting."""
+        if self.schedule_job is not None:
+            self.root.after_cancel(self.schedule_job)
+        self.schedule_job = self.root.after(SAVE_DELAY_MS, self._save_schedule)
+
+    def _save_schedule(self) -> None:
+        self.schedule_job = None
+        try:
+            windows = parse_schedule(self.schedule.get())
+        except ValueError as err:
+            self.settings_status.set(t("settings.save_error", error=err))
+            return
+        if windows == self.windows:
+            return  # Emergencia or a restore already applied it
+        self.windows = windows
+        self._persist()
+        self.settings_status.set(t("settings.saved", time=_now()))
 
     def _refresh_health(self, repeat: bool = True) -> None:
         """Probe the services off the UI thread. Only the startup call repeats, so loops never stack."""
@@ -511,15 +598,15 @@ class GuardianUI:
             if due and not self.in_quiz and not self.pending:
                 self.pending = True
                 self._persist()  # the pending exam must survive a restart
-                self.status.set(t("panel.surprise_pending"))
                 if not self.settings.insistent:
                     self._surprise_notice()  # works with the panel hidden: it is a topmost Toplevel
+            self.wait_reason = None
             if self.pending and self.settings.insistent and not self.in_quiz:
                 wait = self._insistent_wait(now, now_mono)
                 if wait is None:
                     self._open_quiz(insistent=True)
-                elif wait:
-                    self.status.set(t("panel.pending_wait", wait=wait))
+                else:
+                    self.wait_reason = wait or None
         finally:
             self.root.after(1000, self._tick)
 
@@ -539,15 +626,17 @@ class GuardianUI:
             self.saved_today = self.activity.seconds_on(self.activity_day)
 
     def _insistent_wait(self, now: datetime, now_mono: float) -> str | None:
-        """Why an insistent quiz cannot open yet ('' for a silent wait), or None when it can."""
-        if not self.enabled or now_mono < self.retry_at:
+        """Why an insistent quiz cannot open yet ('' if the headline says it already), or None if it can."""
+        if not self.enabled or now < self.pause_until:
             return ""
-        if now < self.pause_until:
-            return t("panel.wait_pause")
+        if now_mono < self.retry_at:
+            return self.retry_reason
         if self.windows and not within_study_window(now, self.windows):
             return t("panel.wait_off_schedule")
-        if self.presence.suspended or self.presence.locked:
+        if self.presence.suspended:
             return ""
+        if self.presence.locked:
+            return t("panel.wait_locked")
         busy = busy_reason()
         if busy is not None:
             return t("panel.wait_fullscreen") if busy == "fullscreen" else t("panel.wait_presentation")
@@ -597,8 +686,12 @@ class GuardianUI:
     def _open_quiz(self, insistent: bool | None = None) -> None:
         """Load five questions off the UI thread. A pending quiz in insistent mode cannot be postponed."""
         if self.in_quiz:
-            if self.quiz is not None and self.quiz.alive and self.quiz.insistent:
-                self.quiz.present()
+            if self.quiz is not None and self.quiz.alive:
+                if self.quiz.insistent:
+                    self.quiz.present()
+                else:
+                    self.quiz.window.lift()
+                    self.quiz.window.focus_force()
             return
         if insistent is None:
             insistent = self.pending and self.settings.insistent
@@ -639,7 +732,8 @@ class GuardianUI:
         self.in_quiz = False
         if quiet:
             self.retry_at = time.monotonic() + 300
-            self.status.set(t("panel.retry_in_5", error=error))
+            self.retry_reason = t("panel.wait_retry")
+            self.status.set(t("panel.prepare_failed", error=error))
             log.warning("Insistent quiz could not load questions: %s", error)
             return
         self.status.set(t("panel.quiz_not_generated"))
@@ -651,7 +745,6 @@ class GuardianUI:
 
         def postponed() -> None:
             self.quiz, self.in_quiz = None, False
-            self.status.set(t("panel.pending_resumable"))
 
         self.quiz = QuizWindow(
             self.root,
@@ -661,21 +754,15 @@ class GuardianUI:
             on_done=done,
             on_leave=postponed,
         )
-        self.status.set(t("panel.quiz_open_insistent") if insistent else t("panel.quiz_open"))
+        self.status.set("")
 
     def _finish_quiz(self, topic: str, questions: list, answers: list[int], source: str) -> None:
         score, passed = self.store.record(topic=topic, questions=questions, answers=answers, source=source)
         self.clock.reset_after_quiz()
         self.quiz, self.pending, self.in_quiz = None, False, False
         self._persist()
-        self._refresh_stats()
-        unverified = source not in CERTIFIED_QUESTION_SOURCES
-        state = (
-            t("panel.state_practice")
-            if unverified
-            else (t("panel.state_approved") if passed else t("panel.state_review"))
-        )
-        self.status.set(t("panel.result_status", score=score, state=state, source=source))
+        self._refresh_stats()  # the Último resultado line shows it, the result window explains it
+        self.status.set("")
         show_exam_result(
             self.root,
             topic=topic,
@@ -702,6 +789,19 @@ def session_end(now: datetime, *, all_day: bool) -> datetime:
     if all_day:
         return datetime.combine(now.date() + timedelta(days=1), day_time.min, tzinfo=now.tzinfo)
     return now + timedelta(minutes=60)
+
+
+def _pack_when_text(label: ttk.Label, text: tk.StringVar, **pack: object) -> None:
+    """Show label only while text has words, so an empty line leaves no gap."""
+
+    def update(*_args: object) -> None:
+        if text.get() and not label.winfo_manager():
+            label.pack(**pack)
+        elif not text.get() and label.winfo_manager():
+            label.pack_forget()
+
+    text.trace_add("write", update)
+    update()
 
 
 def _no_activate(window: tk.Toplevel) -> None:

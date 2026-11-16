@@ -19,6 +19,7 @@ python -m PyInstaller --noconfirm --clean --onedir --windowed `
     --icon (Resolve-Path src\guardian\assets\guardian.ico) `
     --add-data "$(Resolve-Path src\guardian\assets\guardian.ico);guardian\assets" `
     --add-data "$(Resolve-Path src\guardian\locales\es.json);guardian\locales" `
+    --add-data "$(Resolve-Path src\guardian\content\fallback_gcp.json);guardian\content" `
     scripts\installer\guardian_entry.py
 if ($LASTEXITCODE -ne 0) { throw "PyInstaller failed." }
 if ($SkipInstaller) { exit 0 }

@@ -10,6 +10,7 @@ import json
 import logging
 from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
+from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -22,68 +23,21 @@ log = logging.getLogger(__name__)
 
 # Validated, manually authored fallback for one known topic only. No fake
 # auto-grading of arbitrary subjects when Ollama is unavailable.
-FALLBACK_GCP = [
-    Question(
-        "¿Qué servicio de Google Cloud está orientado a análisis SQL de grandes conjuntos de datos?",
-        ("BigQuery", "Cloud SQL", "Cloud DNS", "Cloud CDN"),
-        0,
-        "BigQuery es un almacén analítico administrado para consultas SQL a escala.",
-    ),
-    Question(
-        "¿Cuál es un servicio de mensajería asíncrona de Google Cloud?",
-        ("Cloud Storage", "Pub/Sub", "Cloud Run", "Cloud NAT"),
-        1,
-        "Pub/Sub permite publicar mensajes y recibirlos mediante suscripciones.",
-    ),
-    Question(
-        "¿Qué producto administra objetos en buckets?",
-        ("Bigtable", "Cloud SQL", "Cloud Storage", "Memorystore"),
-        2,
-        "Cloud Storage almacena objetos en buckets.",
-    ),
-    Question(
-        "¿Qué servicio ejecuta contenedores sin administrar servidores?",
-        ("Cloud DNS", "BigQuery", "Cloud IAM", "Cloud Run"),
-        3,
-        "Cloud Run ejecuta servicios y trabajos contenerizados sin administrar servidores.",
-    ),
-    Question(
-        "¿Para qué se utiliza principalmente Cloud IAM?",
-        ("Administrar permisos", "Crear subredes", "Almacenar objetos", "Crear imágenes de VM"),
-        0,
-        "IAM controla quién puede acceder a qué recursos mediante roles y permisos.",
-    ),
-    Question(
-        "¿Qué servicio ofrece una base de datos relacional administrada?",
-        ("Pub/Sub", "Cloud SQL", "Cloud Logging", "Cloud CDN"),
-        1,
-        "Cloud SQL es un servicio administrado de bases de datos relacionales.",
-    ),
-    Question(
-        "¿Qué herramienta procesa datos mediante pipelines por lotes o streaming?",
-        ("Cloud NAT", "Cloud DNS", "Dataflow", "Cloud CDN"),
-        2,
-        "Dataflow permite ejecutar pipelines de procesamiento por lotes y streaming.",
-    ),
-    Question(
-        "¿Qué servicio organiza acceso y facturación dentro de una jerarquía de recursos?",
-        ("Cloud Router", "Pub/Sub", "Cloud Functions", "Resource Manager"),
-        3,
-        "Resource Manager gestiona la jerarquía de recursos, como organizaciones, carpetas y proyectos.",
-    ),
-    Question(
-        "¿Qué producto permite observar métricas de recursos y servicios?",
-        ("Cloud Monitoring", "Cloud Storage", "Bigtable", "Cloud Armor"),
-        0,
-        "Cloud Monitoring recopila y presenta métricas y alertas.",
-    ),
-    Question(
-        "¿Qué producto está diseñado para almacenar grandes volúmenes de datos NoSQL de columnas anchas?",
-        ("Cloud SQL", "Bigtable", "Cloud DNS", "Secret Manager"),
-        1,
-        "Bigtable es una base de datos NoSQL de columnas anchas para grandes escalas.",
-    ),
-]
+_FALLBACK_PATH = Path(__file__).resolve().parent / "content" / "fallback_gcp.json"
+
+
+def _load_fallback_gcp(path: Path) -> list[Question]:
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        questions = [Question.from_dict(item) for item in raw]
+    except (OSError, ValueError, KeyError, TypeError) as err:
+        raise RuntimeError(f"Fallback question file is missing or invalid: {path} ({err})") from err
+    if not questions:
+        raise RuntimeError(f"Fallback question file has no questions: {path}")
+    return questions
+
+
+FALLBACK_GCP = _load_fallback_gcp(_FALLBACK_PATH)
 
 
 SCHEMA = {

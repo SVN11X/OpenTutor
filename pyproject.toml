@@ -18,7 +18,7 @@ guardian = "guardian.desktop:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-guardian = ["assets/*.ico", "locales/*.json"]
+guardian = ["assets/*.ico", "content/*.json", "locales/*.json"]
 
 [tool.ruff]
 line-length = 110

@@ -57,6 +57,19 @@ See `docs/` for the usage guide, design notes and audits.
 Requires Python 3.11 or newer with tkinter. The app has no third-party packages. No network except the
 optional local Ollama at `127.0.0.1:11434`. No telemetry.
 
+## Screenshots without opening the app
+
+See [docs/gallery](docs/gallery/README.md): 16 states of the panel and the quiz windows as a user sees
+them. Regenerate the images after an interface change:
+
+```
+python scripts/gallery.py
+```
+
+It opens the real panel with throwaway data and a sample bank, invisible and without taking focus, and
+captures only Guardian's own windows. `--bank FOLDER` previews a real bank into `build\gallery\`, which git
+ignores. Every pull request also builds the gallery on GitHub Actions as the `gallery` artifact.
+
 ## Build an installer
 
 From the repository root, in Windows PowerShell with Python 3.11 and Inno Setup 6 installed:

@@ -4,6 +4,10 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+
+- `docs/gallery/`: screenshots of 16 states of the panel and the quiz windows, shown by GitHub. `scripts/gallery.py` regenerates them with throwaway data and a sample bank, capturing only Guardian's own windows, the same on every run. A `gallery` workflow builds it for every pull request.
+
 ## [0.5.0] - 2026-11-16
 
 ### Changed

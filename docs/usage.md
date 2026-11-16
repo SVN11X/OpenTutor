@@ -15,19 +15,21 @@ OpenTutor Guardian 0.4.0. The panel is in Spanish, this guide is in English. Des
 1. Open the panel from the tray icon next to the clock, a blue shield with a check. Windows 11 puts new icons
    behind the arrow (^) next to the clock: drag the shield out of it to keep it always visible.
    The Hoy tab lists the first steps.
-2. Ajustes, "Qué te pregunto": check the line under "Carpeta del banco". It must say how many questions it
-   found. If not, press "Elegir carpeta…" and pick `GCP_Data_Engineer_Fieldnotes` (or its `content` folder).
-   The environment variable `GUARDIAN_GCP_BANK` also works.
+2. Ajustes, "Qué te pregunto": "Carpeta del banco" shows the folder Guardian found, and the line under it
+   says how many questions it has. If not, press "Elegir carpeta…" and pick `GCP_Data_Engineer_Fieldnotes`
+   (or its `content` folder). The environment variable `GUARDIAN_GCP_BANK` also works. Ajustes has no
+   Guardar button: every change saves itself and the line at the bottom of the tab says when.
 3. Ajustes, "Cuándo": turn on "Todo el día". This also turns on "Iniciar Guardian con Windows".
 4. Optional: a study schedule such as `08:00-13:00, 15:00-20:00`. Outside it, no quiz opens.
 
 ## What happens during the day
 
 - The session starts when Guardian starts and renews at midnight. "Terminar" ends it until the next start
-  or until you press "Iniciar día".
+  or until you press "Iniciar estudio (Todo el día)".
 - The counter adds only seconds of real activity: keyboard or mouse in the last 3 minutes, session not
-  locked, computer not suspended, not paused, inside the schedule. Hoy shows the minutes to the next quiz,
-  today's active time, and why the counter is paused.
+  locked, computer not suspended, not paused, inside the schedule. Hoy says the state once, with the reason
+  when a pending quiz waits, then the minutes to the next quiz and today's active time. It shows only the
+  buttons that act now, with the main one in bold.
 - When the quiz is due it opens centered and on top, with no exit button. Closing or minimizing it brings it
   back after 5 seconds. It waits while a full-screen app or presentation mode is on, and while paused,
   locked or outside the schedule. For 2 seconds after it appears it ignores keys and clicks.

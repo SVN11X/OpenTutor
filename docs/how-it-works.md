@@ -25,9 +25,10 @@ Status: draft.
 - `src/guardian/activity_log.py`: eligible seconds per day.
 - `src/guardian/i18n.py` and `src/guardian/locales/es.json`: every text the user sees.
 - `src/guardian/content/fallback_gcp.json`: the 10 backup questions.
-- `src/guardian/today_view.py`: the wording of the Hoy tab.
-- `src/guardian/quiz_window.py`: the quiz window and its insistent behavior.
-- `src/guardian/settings_store.py` and `src/guardian/settings_ui.py`: the saved settings and the "Qué te pregunto" section of Ajustes.
+- `src/guardian/today_view.py`: the wording and the buttons of the Hoy tab for each state.
+- `src/guardian/quiz_window.py`: the quiz window, its insistent behavior and how a bank prompt is shown.
+- `src/guardian/widgets.py`: the scrolled area and the main-button style shared by the panel and the quiz.
+- `src/guardian/settings_store.py` and `src/guardian/settings_ui.py`: the saved settings and the "Qué te pregunto" section of Ajustes, which saves itself after each change.
 - `src/guardian/autostart.py`: opt-in, reversible autostart in the current user registry.
 - `src/guardian/fieldnotes.py` and `src/guardian/questions.py`: the question sources.
 - `src/guardian/integrations.py`: honest health of Ollama and FocoLocal.

@@ -25,6 +25,8 @@ from .presence import Presence, is_user_active
 from .questions import get_questions
 from .results_ui import show_exam_result
 from .session_state import SessionState, SessionStore, parse_schedule
+from .settings_store import Settings, SettingsStore
+from .settings_ui import SET_TOPICS, QuestionSettingsPanel, bank_summary, quiz_mode
 from .single_instance import SingleInstance
 from .task_store import TaskStore
 from .tray import TrayIcon
@@ -38,7 +40,10 @@ class GuardianUI:
         self.root.minsize(560, 640)
         app_data = _app_data()
         self.store = ResultStore(app_data / "guardian_mvp.sqlite3")
-        self.clock = SurpriseClock(interval=(20, 30) if demo else (600, 1500))
+        self.demo = demo
+        self.settings_store = SettingsStore(app_data / "guardian_mvp.sqlite3")
+        self.settings = self.settings_store.load()
+        self.clock = SurpriseClock(interval=self._interval())
         self.session_store = SessionStore(
             app_data / "guardian_mvp.sqlite3", legacy_json=app_data / "session.json"
         )
@@ -54,9 +59,6 @@ class GuardianUI:
         self.unsaved_seconds = 0.0
         self.activity_day = date.today()
         self.saved_today = self.activity.seconds_on(self.activity_day)
-        self.topic = tk.StringVar(value="Google Cloud")
-        self.model = tk.StringVar(value="qwen3.5:4b")
-        self.question_source = tk.StringVar(value="Banco local (rápido)")
         # The user explicitly activates a bounded study session; no surprise outside it.
         self.until: datetime | None = None
         self.status = tk.StringVar(value="Desactivado · sin bloqueos")
@@ -76,6 +78,9 @@ class GuardianUI:
         self._render()
         self._refresh_stats()
         self._restore_session()
+        found, _text = bank_summary(self.settings.bank_path)
+        if not found and self.settings.source != "ollama":
+            self.status.set("No encuentro el banco de preguntas: elige su carpeta en Ajustes")
         self.commands: queue.Queue[str] = queue.Queue()
         self.tray = TrayIcon(self.commands.put)
         self.tray_ok = self.tray.start()
@@ -160,24 +165,18 @@ class GuardianUI:
             text=("◐ Práctica = clave sin verificar: cuenta para estudiar, nunca para desbloquear nada."),
         ).pack(anchor="w", pady=6)
 
-        # Ajustes
-        for title, var in (("Tema de estudio:", self.topic), ("Modelo Ollama:", self.model)):
-            ttk.Label(settings, text=title).pack(anchor="w")
-            ttk.Entry(settings, textvariable=var).pack(fill="x", pady=(0, 6))
-        ttk.Label(settings, text="Origen de las preguntas:").pack(anchor="w")
-        ttk.Combobox(
-            settings,
-            textvariable=self.question_source,
-            state="readonly",
-            values=("Banco local (rápido)", "Banco completo (práctica)", "Ollama (puede tardar)"),
-            width=38,
-        ).pack(anchor="w", pady=(0, 6))
+        # Ajustes: what is asked, then when
+        QuestionSettingsPanel(
+            settings, self.settings_store, self.settings, self._on_settings_saved, self.status.set
+        )
+        when = ttk.LabelFrame(settings, text="Cuándo", padding=10)
+        when.pack(fill="x")
         ttk.Label(
-            settings, text="Horario autorizado (HH:MM-HH:MM, separado por comas; vacío = sin horario):"
+            when, text="Horario de estudio (HH:MM-HH:MM, separado por comas. Vacío = todo el día):"
         ).pack(anchor="w")
-        ttk.Entry(settings, textvariable=self.schedule).pack(fill="x", pady=(0, 6))
+        ttk.Entry(when, textvariable=self.schedule).pack(fill="x", pady=(0, 6))
         ttk.Checkbutton(
-            settings,
+            when,
             text="Iniciar Guardian con Windows (oculto en bandeja)",
             variable=self.autostart_var,
             command=self._toggle_autostart,
@@ -226,8 +225,8 @@ class GuardianUI:
                 active=active,
                 until=self.until if active else None,
                 paused_until=paused if active else None,
-                topic=self.topic.get().strip() or "Google Cloud",
-                source=self.question_source.get(),
+                topic=SET_TOPICS[self.settings.question_set],
+                source=self.settings.source,
                 pending=self.pending,
                 windows=self.windows,
             )
@@ -241,7 +240,6 @@ class GuardianUI:
         if saved.active:
             self.enabled, self.until = True, saved.until
             self.pause_until = saved.paused_until or _EPOCH
-            self.topic.set(saved.topic)
             self.status.set(f"Sesión restaurada · hasta {saved.until:%H:%M} · pulsa Detener para terminar")
         if self.pending:
             self.status.set("Examen pendiente de antes del reinicio · pulsa 'Hacer examen ahora'")
@@ -288,6 +286,23 @@ class GuardianUI:
         self.surprise_popup = None
         self.status.set("Emergencia: sesión terminada, sin preguntas ni restricciones activas")
 
+    def _interval(self) -> tuple[int, int]:
+        if self.demo:
+            return (20, 30)
+        return (self.settings.interval_min * 60, self.settings.interval_max * 60)
+
+    def _on_settings_saved(self, settings: Settings) -> None:
+        """Apply saved settings now. A new interval starts a new countdown, the pending quiz stays."""
+        changed = (settings.interval_min, settings.interval_max) != (
+            self.settings.interval_min,
+            self.settings.interval_max,
+        )
+        self.settings = settings
+        if changed:
+            self.clock = SurpriseClock(interval=self._interval())
+        self._persist()
+        self._refresh_health(repeat=False)
+
     def _toggle_autostart(self) -> None:
         try:
             if self.autostart_var.get():
@@ -302,14 +317,16 @@ class GuardianUI:
             self.autostart_var.set(autostart.is_enabled())
             self.status.set(f"No se pudo cambiar el autoarranque: {err}")
 
-    def _refresh_health(self) -> None:
+    def _refresh_health(self, repeat: bool = True) -> None:
+        """Probe the services off the UI thread. Only the startup call repeats, so loops never stack."""
+
         def work() -> None:
             try:
-                text = "  ·  ".join(
-                    h.text() for h in integrations.check_all(bank_ok=fieldnotes.find_bank_path() is not None)
-                )
+                bank_ok = fieldnotes.find_bank_path(self.settings.bank_path or None) is not None
+                text = "  ·  ".join(h.text() for h in integrations.check_all(bank_ok=bank_ok))
                 self.root.after(0, lambda: self.health.set(text))
-                self.root.after(30000, self._refresh_health)
+                if repeat:
+                    self.root.after(30000, self._refresh_health)
             except (tk.TclError, RuntimeError) as err:
                 log.debug("Health refresh skipped: %s", err)  # window closed while probing
 
@@ -440,25 +457,28 @@ class GuardianUI:
             if popup.winfo_exists():
                 popup.destroy()
         self.in_quiz = True
-        mode = (
-            "bank-practice"
-            if self.question_source.get().startswith("Banco completo")
-            else "bank-only"
-            if self.question_source.get().startswith("Banco")
-            else "ollama"
-        )
+        settings = self.settings
+        mode = quiz_mode(settings.source)
         self.status.set(
             "Cargando preguntas del banco local…"
             if mode != "ollama"
             else "Generando preguntas con Ollama (máximo 30 s)…"
         )
-        topic = self.topic.get().strip() or "Google Cloud"
-        model = self.model.get().strip() or "qwen3.5:4b"
+        topic = SET_TOPICS[settings.question_set]
         recent = self.store.recent_prompts()
+        cards = self.store.cards()
 
         def work() -> None:
             try:
-                result = get_questions(topic, recent, model, mode=mode, cards=self.store.cards())
+                result = get_questions(
+                    topic,
+                    recent,
+                    settings.model,
+                    mode=mode,
+                    bank_path=settings.bank_path or None,
+                    cards=cards,
+                    domains=settings.domains,
+                )
                 self.root.after(0, lambda: self._present_quiz(topic, *result))
             except Exception as err:
                 msg = str(err)

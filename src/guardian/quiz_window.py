@@ -14,15 +14,12 @@ from collections.abc import Callable, Sequence
 from tkinter import messagebox, ttk
 
 from .core import QUESTIONS_PER_QUIZ, Question
+from .i18n import t
 from .presence import busy_reason
 
 INPUT_GUARD_MS = 2000
 WATCH_MS = 1000
 RESHOW_SECONDS = 5.0
-INSISTENT_NOTE = (
-    "Responde las 5 preguntas para cerrar esta ventana. "
-    "Emergencia y Salir están en el icono de Guardian, junto al reloj."
-)
 
 
 class QuizWindow:
@@ -47,7 +44,7 @@ class QuizWindow:
         self.hidden_until: float | None = None  # set when the owner closes or minimizes an insistent quiz
         self.waiting_for: str | None = None  # full-screen or presentation reason while hidden
         self.window = tk.Toplevel(root)
-        self.window.title("Guardian · 5 preguntas de repaso")
+        self.window.title(t("quiz.window_title"))
         self.window.minsize(600, 460)
         if not insistent and root.state() != "withdrawn":  # a transient of a hidden panel is invisible
             self.window.transient(root)
@@ -88,19 +85,19 @@ class QuizWindow:
         self.choices = ttk.Frame(content)
         self.choices.pack(fill="x")
         practice = source.startswith("fieldnotes-practice")
-        note = "Práctica: claves originales sin verificar, no otorga desbloqueos. " if practice else ""
-        note += (
-            INSISTENT_NOTE if self.insistent else "Apruebas con 4 de 5. Puedes posponerlo sin penalización."
-        )
+        note = t("quiz.practice_note") if practice else ""
+        note += t("quiz.insistent_note") if self.insistent else t("quiz.note")
         ttk.Label(content, text=note, wraplength=650, justify="left").pack(anchor="w", pady=20)
         self.finish = ttk.Button(content, command=self._next)
         self.finish.pack(anchor="e", pady=8)
         if not self.insistent:
-            ttk.Button(content, text="Posponer / salir", command=self._leave).pack(anchor="e")
+            ttk.Button(content, text=t("quiz.postpone"), command=self._leave).pack(anchor="e")
 
     def _render(self) -> None:
         q = self.questions[self.current]
-        self.title.configure(text=f"{self.current + 1}/{QUESTIONS_PER_QUIZ}  {q.prompt}")
+        self.title.configure(
+            text=t("quiz.question_header", number=self.current + 1, total=QUESTIONS_PER_QUIZ, prompt=q.prompt)
+        )
         self.selected.set(-1)
         for child in self.choices.winfo_children():
             child.destroy()
@@ -116,7 +113,7 @@ class QuizWindow:
             ).pack(anchor="w", pady=8)
         self.canvas.yview_moveto(0)
         last = self.current == QUESTIONS_PER_QUIZ - 1
-        self.finish.configure(text="Corregir examen" if last else "Siguiente")
+        self.finish.configure(text=t("quiz.finish") if last else t("quiz.next"))
 
     def _set_input(self, enabled: bool) -> None:
         state = "normal" if enabled else "disabled"
@@ -167,7 +164,9 @@ class QuizWindow:
     def _next(self) -> None:
         if self.selected.get() not in range(4):
             messagebox.showinfo(
-                "Respuesta pendiente", "Selecciona una respuesta para continuar", parent=self.window
+                t("quiz.answer_missing_title"),
+                t("quiz.answer_missing_body"),
+                parent=self.window,
             )
             return
         self.answers.append(self.selected.get())

@@ -69,7 +69,7 @@ The installer lands in `dist\installer\`. It installs for the current user only 
 
 ## Install
 
-Run `OpenTutorGuardian-Setup-0.4.0.exe`. It needs no administrator rights and installs to
+Run `OpenTutorGuardian-Setup-0.5.0.exe`. It needs no administrator rights and installs to
 `%LOCALAPPDATA%\Programs\OpenTutorGuardian`. If Windows SmartScreen stops it, choose "More info" and then
 "Run anyway". Your results and settings stay in `%LOCALAPPDATA%\OpenTutorGuardian`, also after an
 uninstall. Uninstall from Windows Settings, Apps, like any other program.

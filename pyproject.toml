@@ -17,6 +17,9 @@ guardian = "guardian.desktop:main"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+guardian = ["assets/*.ico"]
+
 [tool.ruff]
 line-length = 110
 target-version = "py311"

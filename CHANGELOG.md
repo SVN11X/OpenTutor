@@ -7,6 +7,13 @@ All notable changes to this project are documented here. The format follows [Kee
 ### Added
 
 - `docs/gallery/`: screenshots of 16 states of the panel and the quiz windows, shown by GitHub. `scripts/gallery.py` regenerates them with throwaway data and a sample bank, capturing only Guardian's own windows. A `gallery` workflow builds it for every pull request.
+- Guardian's own icon, a blue shield with a white check, in the tray, every window, the program file and the installer. `scripts/make_icon.py` draws it with the standard library.
+- Bank questions appear in Spanish when the bank ships a current translation, with a new "Idioma de las preguntas" setting in Ajustes to keep the original English.
+
+### Changed
+
+- The tray menu says "Iniciar estudio", which fits both the 60-minute and the all-day session.
+- Spaced repetition history is keyed by the bank question id, so history from before this change starts again.
 
 ### Fixed
 

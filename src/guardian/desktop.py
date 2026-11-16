@@ -39,13 +39,17 @@ from .settings_ui import SET_TOPICS, QuestionSettingsPanel, bank_summary, quiz_m
 from .single_instance import SingleInstance
 from .task_store import TaskStore
 from .today_view import AgentState, active_today, counter_line, headline, setup_steps
-from .tray import TrayIcon
+from .tray import ICON_PATH, TrayIcon
 
 
 class GuardianUI:
     def __init__(self, root: tk.Tk, *, demo: bool = False) -> None:
         self.root = root
         self.root.title("OpenTutor Guardian")
+        try:
+            self.root.iconbitmap(default=str(ICON_PATH))  # every window of the app, not only the panel
+        except tk.TclError as err:
+            log.warning("Window icon not set: %s", err)
         # Fit small laptop screens at 125 or 150 %, centered so the taskbar never hides the exits.
         screen_w, screen_h = self.root.winfo_screenwidth(), self.root.winfo_screenheight()
         height = min(700, screen_h - 120)
@@ -642,6 +646,7 @@ class GuardianUI:
                     bank_path=settings.bank_path or None,
                     cards=cards,
                     domains=settings.domains,
+                    language=settings.language,
                 )
                 self.root.after(0, lambda: self._present_quiz(topic, *result, insistent=insistent))
             except Exception as err:

@@ -5,13 +5,13 @@ import unittest
 from datetime import UTC, datetime, timedelta
 
 from guardian.core import Question
-from guardian.spaced import BOX_INTERVALS, Card, key, next_card, pick
+from guardian.spaced import BOX_INTERVALS, Card, key, next_card, pick, question_key
 
 NOW = datetime(2026, 11, 16, 9, 0, tzinfo=UTC)
 
 
-def question(prompt: str) -> Question:
-    return Question(prompt, ("A", "B", "C", "D"), 0, "Porque la fuente lo indica.")
+def question(prompt: str, uid: str = "") -> Question:
+    return Question(prompt, ("A", "B", "C", "D"), 0, "Porque la fuente lo indica.", uid=uid)
 
 
 class NextCardTests(unittest.TestCase):
@@ -35,6 +35,18 @@ class NextCardTests(unittest.TestCase):
         card = next_card(Card(box=last, due_at=NOW), True, NOW)
         self.assertEqual(card.box, last)
         self.assertEqual(card.due_at, NOW + BOX_INTERVALS[last])
+
+
+class QuestionKeyTests(unittest.TestCase):
+    def test_uid_wins_over_the_prompt_key(self):
+        self.assertEqual(question_key(question("P0", uid="imp-12")), "imp-12")
+        self.assertEqual(question_key(question("P0")), key("P0"))
+
+    def test_the_same_uid_in_two_languages_shares_one_slot_in_pick(self):
+        spanish = question("¿P0?", uid="imp-1")
+        english = question("P0", uid="imp-1")
+        self.assertEqual(pick([spanish, english], {}, NOW, k=5), [spanish])
+        self.assertEqual(pick([english, spanish], {}, NOW, k=5), [english])
 
 
 class PickTests(unittest.TestCase):

@@ -16,6 +16,8 @@ python -m PyInstaller --noconfirm --clean --onedir --windowed `
     --paths src `
     --specpath build `
     --version-file (Resolve-Path scripts\installer\version_info.txt) `
+    --icon (Resolve-Path src\guardian\assets\guardian.ico) `
+    --add-data "$(Resolve-Path src\guardian\assets\guardian.ico);guardian\assets" `
     scripts\installer\guardian_entry.py
 if ($LASTEXITCODE -ne 0) { throw "PyInstaller failed." }
 if ($SkipInstaller) { exit 0 }

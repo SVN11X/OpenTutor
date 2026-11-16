@@ -1,4 +1,4 @@
-<!-- Title: Conventional Commits, for example "feat(api): add weather endpoint". Every section is required. Write "None" when a section does not apply. -->
+<!-- Title: Conventional Commits, for example "feat(api): add weather endpoint". Every section is required. Write "None" when a section does not apply. This repository is a fork: open the pull request with gh pr create --repo SVN11X/OpenTutor. -->
 
 ## Task
 

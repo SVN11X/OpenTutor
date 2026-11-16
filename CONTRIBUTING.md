@@ -9,3 +9,13 @@ Guardian is a small Python desktop app with no third-party dependencies.
 4. Never let unverified questions or unreviewed work grant credit.
 5. Write code, comments, docs and commits in English.
 6. Open a pull request that says what you ran and what you could not test.
+
+## This repository is a fork
+
+`origin` is `SVN11X/OpenTutor`, a fork of `zijinz456/OpenTutor`. A plain `gh pr create` can open the pull request on the upstream repository, where it is public and cannot be deleted. Always name the target:
+
+```
+gh pr create --repo SVN11X/OpenTutor --base main --head <branch>
+```
+
+The same applies to every `gh` command that writes, such as issues, comments and merges. To make it the default for this folder, run `gh repo set-default SVN11X/OpenTutor`.

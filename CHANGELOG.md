@@ -16,6 +16,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Changed
 
+- The Hoy tab shows one clear state line, the counter, today's active time and a first-steps card that can be hidden. The panel fits and centers on small screens, and the live view no longer reads SQLite every second.
 - Terminar keeps a pending quiz. Only Emergencia drops it.
 - The default source is the whole bank as practice. The free text topic field is gone.
 - Quiz questions are chosen by spaced repetition: wrong answers return sooner, right answers later, and the bank no longer runs out when the pool is small.

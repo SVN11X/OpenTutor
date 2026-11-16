@@ -18,6 +18,7 @@ import argparse
 import ctypes
 import json
 import os
+import random
 import struct
 import sys
 import tempfile
@@ -26,6 +27,7 @@ import tkinter as tk
 import zlib
 from ctypes import wintypes
 from dataclasses import replace
+from datetime import datetime, timedelta
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -218,11 +220,14 @@ def run(out: Path, bank: Path | None) -> list[tuple[str, str, str]]:
     os.environ["LOCALAPPDATA"] = str(data)  # never touch the owner's real results or settings
     os.environ["GUARDIAN_GCP_BANK"] = str(data / "no-bank")  # first run: no bank found yet
 
-    from guardian import desktop, integrations
+    from guardian import core, desktop, integrations, spaced
     from guardian.i18n import t
     from guardian.questions import get_questions
     from guardian.quiz_window import QuizWindow
     from guardian.settings_ui import SET_TOPICS, bank_folder, quiz_mode
+
+    # Fixed question order and quiz interval, so the versioned gallery changes only when the interface does.
+    core.SystemRandom = spaced.SystemRandom = lambda: random.Random(0)
 
     tk.Misc.focus_force = lambda self: None  # the gallery never steals focus from the person working
     toplevel_init = tk.Toplevel.__init__
@@ -312,6 +317,8 @@ def run(out: Path, bank: Path | None) -> list[tuple[str, str, str]]:
         ui.paused_reason = None
 
         ui._pause()
+        tomorrow = datetime.now().astimezone() + timedelta(days=1)
+        ui.pause_until = tomorrow.replace(hour=10, minute=15, second=0, microsecond=0)  # same shot every run
         shoot(root, "04-today-pause", "Hoy, paused for 15 minutes", "Pausar from the panel or the tray.")
         ui.pause_until = desktop._EPOCH
 

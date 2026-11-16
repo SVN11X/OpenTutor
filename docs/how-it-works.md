@@ -2,8 +2,6 @@
 
 <!-- An AI tool may draft this file from the real code, never from a guess. It stays a draft until the owner confirms it. Update it in the same change that alters the main flow. Paths in backticks must exist: the check reads them. -->
 
-Status: draft.
-
 ## From start to finish
 
 1. The user starts Guardian. It creates a tray icon and the panel, or only the icon with `--hidden`.
@@ -12,7 +10,7 @@ Status: draft.
 4. After the eligible minutes set in Ajustes (10 to 25 by default) the quiz is due. In insistent mode (only when the tray icon started) it opens by itself in a window that stays on top and comes back until all five answers are given. With insistent mode off, a small notice with "Más tarde" appears instead. One quiz stays pending at a time.
 5. The user answers five questions chosen by spaced repetition from the local bank, so wrong answers return sooner and the bank does not run out. Four correct from a reviewed source is a certified pass.
 6. The result is stored in SQLite and shown in the Repasos and Progreso tabs. Unverified sources are marked as practice.
-7. Emergency ends the session and removes the saved session. Exit closes the agent.
+7. Emergencia ends the session, drops the pending quiz, clears the schedule and removes the saved session. Salir closes the agent and keeps a pending quiz for the next start.
 
 ## Parts
 
@@ -50,4 +48,4 @@ Run: `.\scripts\run-dev.ps1`. Check: `.\scripts\run-dev.ps1 -TestsOnly`.
 
 ## Not covered
 
-No blocking of apps or sites, no FocoLocal link, no installer, no leisure credit, and no real-device check of high DPI, two monitors or suspension yet.
+No blocking of apps or sites, no FocoLocal link, no signed installer, no leisure credit, and no real-device check of high DPI, two monitors or suspension yet.

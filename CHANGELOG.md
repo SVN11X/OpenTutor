@@ -16,7 +16,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Fixed
 
-- Without a tray icon, a quiz can always be postponed, even with "Ventana insistente" on, because the tray menu holds the only exits of an insistent quiz (proposed decision 0009).
+- Without a tray icon, a quiz can always be postponed, even with "Ventana insistente" on, because the tray menu holds the only exits of an insistent quiz (decision 0009).
 
 ## [0.4.0] - 2026-11-16
 

@@ -1,6 +1,6 @@
 # 0006. Windows installer and code signing
 
-- Status: accepted
+- Status: accepted. Signing on hold since 2026-11-16, see Update.
 - Date: 2026-11-15
 - Proposed by: Claude Code
 - Accepted by: owner
@@ -24,3 +24,7 @@ Guardian runs from source. Users need an installer, and Windows shows "Unknown p
 - Windows may still warn until the file gains reputation. A signature does not guarantee silence from every antivirus.
 - SignPath requires a public build and a download page that says the project uses SignPath Foundation. That page is written only after approval.
 - To undo: delete `scripts/installer/`, `scripts/build-installer.ps1`, `requirements-build.txt` and the build workflow.
+
+## Update 2026-11-16: signing on hold
+
+The owner put code signing on hold. The SignPath Foundation terms (https://signpath.org/terms) sign a modified version of another project only when the upstream project publishes signed builds, and this repository is a GitHub fork. The installer stays unsigned, and each release publishes its SHA-256 in `SHA256SUMS.txt`. The preparation (checklist, policy page and a guarded signing step) is kept in the closed pull request #33, branch `docs/signpath-prep`, to reopen if Guardian moves to its own repository or the fork rule is met.

@@ -219,9 +219,10 @@ def run(out: Path, bank: Path | None) -> list[tuple[str, str, str]]:
     os.environ["GUARDIAN_GCP_BANK"] = str(data / "no-bank")  # first run: no bank found yet
 
     from guardian import desktop, integrations
+    from guardian.i18n import t
     from guardian.questions import get_questions
     from guardian.quiz_window import QuizWindow
-    from guardian.settings_ui import SET_TOPICS, quiz_mode
+    from guardian.settings_ui import SET_TOPICS, bank_folder, quiz_mode
 
     tk.Misc.focus_force = lambda self: None  # the gallery never steals focus from the person working
     toplevel_init = tk.Toplevel.__init__
@@ -283,11 +284,19 @@ def run(out: Path, bank: Path | None) -> list[tuple[str, str, str]]:
         ui.start_label.set(ui._start_text())
         ui._start()
         ui._refresh_health()
-        ui.question_panel._refresh_bank()
-        ui.question_panel._render_domains()
-        if bank is None:  # the temp path holds the Windows user name and changes on every run
-            text = ui.question_panel.bank_text.get()
-            ui.question_panel.bank_text.set(text.replace(str(data.resolve()), NEUTRAL_BANK_PARENT))
+        panel = ui.question_panel
+        panel._refresh_bank()
+        panel._render_domains()
+        # The field shows the folder found by itself. The temp path holds the Windows user name and
+        # changes on every run, so the versioned gallery shows a neutral one.
+        shown = bank_folder("")
+        if bank is None:
+            shown = shown.replace(str(data.resolve()), NEUTRAL_BANK_PARENT)
+        panel.found_folder = shown
+        panel.bank_var.set(shown)
+        if panel.save_job is not None:  # showing the folder is not a change to save
+            panel.frame.after_cancel(panel.save_job)
+            panel.save_job = None
         ui.status.set("")
         shoot(root, "02-today-all-day", "Hoy, studying all day", "All-day session, counter running.")
 
@@ -307,13 +316,13 @@ def run(out: Path, bank: Path | None) -> list[tuple[str, str, str]]:
         ui.pause_until = desktop._EPOCH
 
         ui.pending = True
-        ui.status.set("Examen pendiente en espera: pantalla completa")
+        ui.wait_reason = t("panel.wait_fullscreen")
         shoot(
             root, "05-today-pending-wait", "Hoy, quiz waiting", "A quiz is due but a full-screen app is open."
         )
 
         tab(5)
-        shoot(root, "06-settings", "Ajustes", "Qué te pregunto, the bank folder, and Cuándo.")
+        shoot(root, "06-settings", "Ajustes", "Cuándo first, then Qué te pregunto. Changes save themselves.")
 
         settings = ui.settings
         topic = SET_TOPICS[settings.question_set]

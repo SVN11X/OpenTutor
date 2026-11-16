@@ -43,7 +43,7 @@ A quiz is due but a full-screen app is open.
 
 ## Ajustes
 
-Qué te pregunto, the bank folder, and Cuándo.
+Cuándo first, then Qué te pregunto. Changes save themselves.
 
 ![Ajustes](06-settings.png)
 

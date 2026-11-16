@@ -37,3 +37,7 @@ add paid services, telemetry or hidden control.
 - FocoLocal health is always `unavailable`: no IPC exists yet.
 - The surprise popup uses WS_EX_NOACTIVATE so it does not take keyboard focus.
   Not yet verified while typing in another app.
+
+## Superseded in part (2026-11-16)
+- Decision 0007 replaces the non-activating notice with an insistent quiz window, and adds an all-day
+  mode that starts the session at sign-in when the owner turns it on.

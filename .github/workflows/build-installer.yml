@@ -8,6 +8,8 @@ permissions:
 jobs:
   installer:
     runs-on: windows-latest
+    env:
+      SIGNPATH_TOKEN_PRESENT: ${{ secrets.SIGNPATH_API_TOKEN != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -15,7 +17,28 @@ jobs:
           python-version: "3.11"
       - name: Build
         run: .\scripts\build-installer.ps1
-      - uses: actions/upload-artifact@v4
+      - name: Upload unsigned installer
+        id: upload-unsigned
+        uses: actions/upload-artifact@v4
         with:
           name: installer-unsigned
           path: dist/installer/*.exe
+      # Runs only after the owner adds the SignPath secret and variables. See docs/signing/application.md.
+      - name: Submit signing request
+        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' && env.SIGNPATH_TOKEN_PRESENT == 'true' }}
+        uses: signpath/github-action-submit-signing-request@f6d04783b4569d051e0c80105fe66e82819d0092 # v3.0
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          artifact-configuration-slug: ${{ vars.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG }}
+          github-artifact-id: ${{ steps.upload-unsigned.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: dist/signed
+      - name: Upload signed installer
+        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' && env.SIGNPATH_TOKEN_PRESENT == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-signed
+          path: dist/signed/*.exe

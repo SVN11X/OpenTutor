@@ -10,7 +10,13 @@ from tkinter import ttk
 
 from guardian.fieldnotes import find_bank_path
 from guardian.settings_store import DEFAULTS, SettingsStore
-from guardian.settings_ui import QuestionSettingsPanel, bank_summary, domain_labels, quiz_mode
+from guardian.settings_ui import (
+    LANGUAGE_LABELS,
+    QuestionSettingsPanel,
+    bank_summary,
+    domain_labels,
+    quiz_mode,
+)
 
 
 def write_bank(root: Path, *, domains: bool = True) -> Path:
@@ -102,6 +108,12 @@ class FormTests(unittest.TestCase):
         self.store.save(replace(DEFAULTS, all_day=True))
         self.panel.save()
         self.assertTrue(self.store.load().all_day)
+
+    def test_the_language_combobox_saves_english(self):
+        self.panel.language_var.set(LANGUAGE_LABELS["en"])
+        self.panel.save()
+        self.assertEqual(self.saved[-1].language, "en")
+        self.assertEqual(self.store.load().language, "en")
 
     def test_bad_input_is_reported_and_not_saved(self):
         for domain in self.panel.domain_vars.values():

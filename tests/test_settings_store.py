@@ -25,6 +25,7 @@ class SettingsStoreTests(unittest.TestCase):
     def test_round_trip_survives_reopening(self):
         wanted = Settings(
             source="reviewed",
+            language="en",
             domains=(4, 2, 2),
             interval_min=30,
             interval_max=60,
@@ -35,6 +36,15 @@ class SettingsStoreTests(unittest.TestCase):
         saved = SettingsStore(self.path).save(wanted)
         self.assertEqual(saved.domains, (2, 4))
         self.assertEqual(SettingsStore(self.path).load(), saved)
+
+    def test_language_round_trip_and_rejection(self):
+        store = SettingsStore(self.path)
+        saved = store.save(replace(DEFAULTS, language="en"))
+        self.assertEqual(saved.language, "en")
+        self.assertEqual(store.load().language, "en")
+        with self.assertRaisesRegex(ValueError, "Idioma de preguntas"):
+            store.save(replace(DEFAULTS, language="fr"))
+        self.assertEqual(store.load(), saved)
 
     def test_invalid_values_are_rejected_before_writing(self):
         store = SettingsStore(self.path)

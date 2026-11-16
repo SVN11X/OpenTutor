@@ -20,6 +20,10 @@ SOURCE_LABELS = {
     "reviewed": "Solo revisadas (pocas, se repiten)",
     "ollama": "Ollama local (genera preguntas, puede tardar)",
 }
+LANGUAGE_LABELS = {
+    "es": "Español (traducción del banco)",
+    "en": "Inglés (original)",
+}
 SET_TOPICS = {"gcp-pde": "Google Cloud Data Engineer"}  # the topic name get_questions knows
 
 
@@ -61,6 +65,7 @@ class QuestionSettingsPanel:
         self.store, self.settings, self.on_saved, self.status = store, settings, on_saved, status
         self.set_var = tk.StringVar(value=QUESTION_SETS[settings.question_set])
         self.source_var = tk.StringVar(value=SOURCE_LABELS[settings.source])
+        self.language_var = tk.StringVar(value=LANGUAGE_LABELS[settings.language])
         chosen = set(settings.domains or DOMAIN_IDS)
         self.domain_vars = {i: tk.BooleanVar(value=i in chosen) for i in DOMAIN_IDS}
         self.min_var = tk.StringVar(value=str(settings.interval_min))
@@ -82,29 +87,37 @@ class QuestionSettingsPanel:
         ttk.Combobox(
             f, textvariable=self.source_var, state="readonly", values=list(SOURCE_LABELS.values()), width=44
         ).grid(row=1, column=1, columnspan=2, sticky="w", pady=2)
-        ttk.Label(f, text="Dominios del examen:").grid(row=2, column=0, sticky="nw", pady=(6, 0))
+        ttk.Label(f, text="Idioma de las preguntas:").grid(row=2, column=0, sticky="w")
+        ttk.Combobox(
+            f,
+            textvariable=self.language_var,
+            state="readonly",
+            values=list(LANGUAGE_LABELS.values()),
+            width=44,
+        ).grid(row=2, column=1, columnspan=2, sticky="w", pady=2)
+        ttk.Label(f, text="Dominios del examen:").grid(row=3, column=0, sticky="nw", pady=(6, 0))
         self.domain_box = ttk.Frame(f)
-        self.domain_box.grid(row=2, column=1, columnspan=2, sticky="w", pady=(6, 0))
+        self.domain_box.grid(row=3, column=1, columnspan=2, sticky="w", pady=(6, 0))
         self._render_domains()
-        ttk.Label(f, text="Minutos de actividad entre preguntas:").grid(row=3, column=0, sticky="w", pady=6)
+        ttk.Label(f, text="Minutos de actividad entre preguntas:").grid(row=4, column=0, sticky="w", pady=6)
         span = ttk.Frame(f)
-        span.grid(row=3, column=1, columnspan=2, sticky="w")
+        span.grid(row=4, column=1, columnspan=2, sticky="w")
         low, high = INTERVAL_BOUNDS
         ttk.Label(span, text="de").pack(side="left")
         ttk.Spinbox(span, from_=low, to=high, textvariable=self.min_var, width=5).pack(side="left", padx=4)
         ttk.Label(span, text="a").pack(side="left")
         ttk.Spinbox(span, from_=low, to=high, textvariable=self.max_var, width=5).pack(side="left", padx=4)
         ttk.Label(span, text="(al azar dentro del rango)").pack(side="left")
-        ttk.Label(f, text="Carpeta del banco:").grid(row=4, column=0, sticky="w")
-        ttk.Entry(f, textvariable=self.bank_var, width=36).grid(row=4, column=1, sticky="we", pady=2)
-        ttk.Button(f, text="Elegir carpeta…", command=self._choose_bank).grid(row=4, column=2, padx=(6, 0))
+        ttk.Label(f, text="Carpeta del banco:").grid(row=5, column=0, sticky="w")
+        ttk.Entry(f, textvariable=self.bank_var, width=36).grid(row=5, column=1, sticky="we", pady=2)
+        ttk.Button(f, text="Elegir carpeta…", command=self._choose_bank).grid(row=5, column=2, padx=(6, 0))
         ttk.Label(f, textvariable=self.bank_text, wraplength=500, justify="left").grid(
-            row=5, column=0, columnspan=3, sticky="w"
+            row=6, column=0, columnspan=3, sticky="w"
         )
-        ttk.Label(f, text="Modelo Ollama:").grid(row=6, column=0, sticky="w", pady=(6, 0))
-        ttk.Entry(f, textvariable=self.model_var, width=24).grid(row=6, column=1, sticky="w", pady=(6, 0))
+        ttk.Label(f, text="Modelo Ollama:").grid(row=7, column=0, sticky="w", pady=(6, 0))
+        ttk.Entry(f, textvariable=self.model_var, width=24).grid(row=7, column=1, sticky="w", pady=(6, 0))
         ttk.Button(f, text="Guardar ajustes", command=self.save).grid(
-            row=7, column=2, sticky="e", pady=(10, 0)
+            row=8, column=2, sticky="e", pady=(10, 0)
         )
         f.columnconfigure(1, weight=1)
         self._refresh_bank()
@@ -137,10 +150,12 @@ class QuestionSettingsPanel:
             raise ValueError("Marca al menos un dominio del examen")
         set_id = next(k for k, v in QUESTION_SETS.items() if v == self.set_var.get())
         source = next(k for k, v in SOURCE_LABELS.items() if v == self.source_var.get())
+        language = next(k for k, v in LANGUAGE_LABELS.items() if v == self.language_var.get())
         return replace(
             self.store.load(),  # other sections save their own fields, never overwrite them here
             question_set=set_id,
             source=source,
+            language=language,
             domains=() if len(domains) == len(DOMAIN_IDS) else domains,
             interval_min=low,
             interval_max=high,

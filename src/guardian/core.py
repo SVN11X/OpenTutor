@@ -12,7 +12,7 @@ from datetime import time as clock_time
 from pathlib import Path
 from random import Random, SystemRandom
 
-from .spaced import Card, next_card
+from .spaced import Card, next_card, question_key
 
 log = logging.getLogger(__name__)
 
@@ -37,6 +37,9 @@ class Question:
     options: tuple[str, str, str, str]
     answer_index: int
     explanation: str
+    # Stable id of the source question, empty when there is none. Not validated and
+    # not serialized: it only keys spaced repetition across languages.
+    uid: str = ""
 
     def __post_init__(self) -> None:
         if not isinstance(self.prompt, str) or not self.prompt.strip() or len(self.options) != 4:
@@ -207,7 +210,7 @@ class ResultStore:
             )
             for question, answer in zip(questions, answers, strict=True):
                 correct = answer == question.answer_index
-                prompt_key = question.prompt.strip().casefold()
+                prompt_key = question_key(question)
                 card, seen, wrong = self._existing_card(prompt_key)
                 updated = next_card(card, correct, timestamp)
                 self.con.execute(

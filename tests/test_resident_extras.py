@@ -85,6 +85,16 @@ class AutostartTests(unittest.TestCase):
 
 
 @unittest.skipUnless(sys.platform == "win32", "Windows registry only")
+class AutostartFrozenTests(unittest.TestCase):
+    def test_frozen_build_starts_its_own_executable_hidden(self):
+        sys.frozen = True
+        try:
+            command = autostart.build_command(Path("C:/ignored"))
+        finally:
+            del sys.frozen
+        self.assertEqual(command, f'"{sys.executable}" --hidden')
+
+
 class AutostartMigrationTests(unittest.TestCase):
     def test_stale_value_is_rewritten_and_missing_value_is_not_created(self):
         import winreg

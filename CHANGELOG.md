@@ -6,7 +6,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Added
 
-- `scripts/gallery.py` takes screenshots of 16 states of the panel and the quiz windows, with throwaway data and only Guardian's own windows, and writes an `index.html`. A `gallery` workflow builds it for every pull request.
+- `docs/gallery/`: screenshots of 16 states of the panel and the quiz windows, shown by GitHub. `scripts/gallery.py` regenerates them with throwaway data and a sample bank, capturing only Guardian's own windows. A `gallery` workflow builds it for every pull request.
 
 ### Fixed
 

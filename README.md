@@ -59,14 +59,16 @@ optional local Ollama at `127.0.0.1:11434`. No telemetry.
 
 ## Screenshots without opening the app
 
+See [docs/gallery](docs/gallery/README.md): 16 states of the panel and the quiz windows as a user sees
+them. Regenerate the images after an interface change:
+
 ```
 python scripts/gallery.py
 ```
 
-It opens the real panel with throwaway data, invisible and without taking focus, walks through 16 states
-(first run, all day, paused, settings, insistent quiz, result, every tab) and writes PNG files and an
-`index.html` to `build\gallery\`. Only Guardian's own windows are captured. Every pull request also builds
-the gallery on GitHub Actions: open the run of the `gallery` workflow and download the `gallery` artifact.
+It opens the real panel with throwaway data and a sample bank, invisible and without taking focus, and
+captures only Guardian's own windows. `--bank FOLDER` previews a real bank into `build\gallery\`, which git
+ignores. Every pull request also builds the gallery on GitHub Actions as the `gallery` artifact.
 
 ## Build an installer
 

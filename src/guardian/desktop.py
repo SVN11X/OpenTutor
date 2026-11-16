@@ -20,11 +20,18 @@ from tkinter import messagebox, ttk
 
 from . import autostart, fieldnotes, integrations
 from .activity_log import ActivityLog
-from .core import ResultStore, SurpriseClock, attempt_label, within_study_window
+from .core import (
+    CERTIFIED_QUESTION_SOURCES,
+    ResultStore,
+    SurpriseClock,
+    attempt_label,
+    within_study_window,
+)
 from .evidence_ui import EvidencePanel
 from .logging_setup import setup_logging
-from .presence import Presence, is_user_active
+from .presence import Presence, busy_reason, is_user_active
 from .questions import get_questions
+from .quiz_window import QuizWindow
 from .results_ui import show_exam_result
 from .session_state import SessionState, SessionStore, parse_schedule
 from .settings_store import Settings, SettingsStore
@@ -57,7 +64,11 @@ class GuardianUI:
         self.in_quiz = False
         self.pending = False
         self.surprise_popup = None
+        self.quiz: QuizWindow | None = None
         self.last_tick = time.monotonic()
+        # Grace after start so the desktop loads before an insistent quiz, and backoff after a failure.
+        self.retry_at = self.last_tick + (5 if demo else 60)
+        self.insistent_var = tk.BooleanVar(value=self.settings.insistent)
         self.presence = Presence()
         self.paused_reason: str | None = None
         self.activity = ActivityLog(app_data / "guardian_mvp.sqlite3")
@@ -194,6 +205,12 @@ class GuardianUI:
             variable=self.all_day_var,
             command=self._toggle_all_day,
         ).pack(anchor="w", pady=(4, 0))
+        ttk.Checkbutton(
+            when,
+            text="Ventana insistente: el examen no se puede posponer y vuelve si lo cierras",
+            variable=self.insistent_var,
+            command=self._toggle_insistent,
+        ).pack(anchor="w", pady=(4, 0))
 
     def _refresh_views(self) -> None:
         """Recompute the read-only panels from SQLite and the clock. Cheap, UI thread."""
@@ -256,7 +273,7 @@ class GuardianUI:
             self.status.set(f"Sesión restaurada · hasta {saved.until:%H:%M} · pulsa Detener para terminar")
         if self.pending:
             self.status.set("Examen pendiente de antes del reinicio · pulsa 'Hacer examen ahora'")
-            if self.enabled:
+            if self.enabled and not self.settings.insistent:
                 self.root.after(2000, self._surprise_notice)
 
     def _start_text(self) -> str:
@@ -293,6 +310,7 @@ class GuardianUI:
         self.until = None
         self.user_stopped = by_user
         self.clock.reset_after_quiz()
+        self._close_quiz()
         self._persist()
         self.status.set("Sesión terminada" + (" · queda un examen pendiente" if self.pending else ""))
 
@@ -325,6 +343,20 @@ class GuardianUI:
             self.clock = SurpriseClock(interval=self._interval())
         self._persist()
         self._refresh_health(repeat=False)
+
+    def _toggle_insistent(self) -> None:
+        on = self.insistent_var.get()
+        try:
+            self.settings = self.settings_store.save(replace(self.settings_store.load(), insistent=on))
+        except (ValueError, OSError) as err:
+            self.insistent_var.set(self.settings.insistent)
+            self.status.set(f"No se pudo guardar: {err}")
+            return
+        self.status.set(
+            "Ventana insistente activada: el próximo examen no se podrá posponer"
+            if on
+            else "Ventana insistente desactivada: verás un aviso con 'Más tarde'"
+        )
 
     def _toggle_all_day(self) -> None:
         """Save the all-day choice. Turning it on also turns on autostart, or it cannot start at sign-in."""
@@ -441,7 +473,14 @@ class GuardianUI:
                 self.pending = True
                 self._persist()  # the pending exam must survive a restart
                 self.status.set("Tienes un examen sorpresa pendiente · pulsa 'Hacer examen ahora'")
-                self._surprise_notice()  # works with the panel hidden: it is a topmost Toplevel
+                if not self.settings.insistent:
+                    self._surprise_notice()  # works with the panel hidden: it is a topmost Toplevel
+            if self.pending and self.settings.insistent and not self.in_quiz:
+                wait = self._insistent_wait(now, now_mono)
+                if wait is None:
+                    self._open_quiz(insistent=True)
+                elif wait:
+                    self.status.set(f"Examen pendiente en espera: {wait}")
         finally:
             self.root.after(1000, self._tick)
 
@@ -459,6 +498,27 @@ class GuardianUI:
         if date.today() != self.activity_day:  # a new day starts from its own total
             self.activity_day = date.today()
             self.saved_today = self.activity.seconds_on(self.activity_day)
+
+    def _insistent_wait(self, now: datetime, now_mono: float) -> str | None:
+        """Why an insistent quiz cannot open yet ('' for a silent wait), or None when it can."""
+        if not self.enabled or now_mono < self.retry_at:
+            return ""
+        if now < self.pause_until:
+            return "pausa"
+        if self.windows and not within_study_window(now, self.windows):
+            return "fuera del horario"
+        if self.presence.suspended or self.presence.locked:
+            return ""
+        busy = busy_reason()
+        if busy is not None:
+            return "pantalla completa" if busy == "fullscreen" else "modo presentación"
+        return None
+
+    def _close_quiz(self) -> None:
+        if self.quiz is not None:
+            self.quiz.close()
+        self.quiz = None
+        self.in_quiz = False
 
     def _surprise_notice(self) -> None:
         """Visible non-modal reminder; never steals keyboard focus."""
@@ -497,9 +557,14 @@ class GuardianUI:
         notice.protocol("WM_DELETE_WINDOW", dismiss)
         notice.after(30000, dismiss)
 
-    def _open_quiz(self) -> None:
+    def _open_quiz(self, insistent: bool | None = None) -> None:
+        """Load five questions off the UI thread. A pending quiz in insistent mode cannot be postponed."""
         if self.in_quiz:
+            if self.quiz is not None and self.quiz.alive and self.quiz.insistent:
+                self.quiz.present()
             return
+        if insistent is None:
+            insistent = self.pending and self.settings.insistent
         if self.surprise_popup is not None:
             popup = self.surprise_popup
             self.surprise_popup = None
@@ -528,114 +593,60 @@ class GuardianUI:
                     cards=cards,
                     domains=settings.domains,
                 )
-                self.root.after(0, lambda: self._present_quiz(topic, *result))
+                self.root.after(0, lambda: self._present_quiz(topic, *result, insistent=insistent))
             except Exception as err:
                 msg = str(err)
-                self.root.after(0, lambda: self._generation_failed(msg))
+                self.root.after(0, lambda: self._generation_failed(msg, quiet=insistent))
 
         threading.Thread(target=work, daemon=True).start()
 
-    def _generation_failed(self, error: str) -> None:
+    def _generation_failed(self, error: str, quiet: bool = False) -> None:
+        """Keep the quiz pending. An automatic attempt retries in 5 minutes instead of showing a dialog."""
         self.in_quiz = False
+        if quiet:
+            self.retry_at = time.monotonic() + 300
+            self.status.set(f"No se pudo preparar el examen: {error}. Reintento en 5 min")
+            log.warning("Insistent quiz could not load questions: %s", error)
+            return
         self.status.set("No se generó el cuestionario; no se aplicó ninguna restricción")
         messagebox.showwarning("No se pudo preparar el examen", error)
-        # Keep the pending state to retry manually without spawning new interruptions.
 
-    def _present_quiz(self, topic: str, questions: list, source: str) -> None:
-        window = tk.Toplevel(self.root)
-        window.title("Examen de 5 preguntas · Guardian")
-        window.geometry("760x620")
-        window.minsize(600, 460)
-        if self.root.state() != "withdrawn":  # a transient child of a hidden panel would be invisible
-            window.transient(self.root)
-        window.lift()
-        current = 0
-        answers: list[int] = []
-        selected = tk.IntVar(value=-1)
-        # Long imported questions and answer options must remain reachable.
-        canvas = tk.Canvas(window, highlightthickness=0)
-        scrollbar = ttk.Scrollbar(window, orient="vertical", command=canvas.yview)
-        canvas.configure(yscrollcommand=scrollbar.set)
-        scrollbar.pack(side="right", fill="y")
-        canvas.pack(side="left", fill="both", expand=True)
-        content = ttk.Frame(canvas, padding=20)
-        body_id = canvas.create_window((0, 0), window=content, anchor="nw")
-        content.bind("<Configure>", lambda _e: canvas.configure(scrollregion=canvas.bbox("all")))
-        canvas.bind("<Configure>", lambda e: canvas.itemconfigure(body_id, width=e.width))
-        window.bind("<MouseWheel>", lambda e: canvas.yview_scroll(-int(e.delta / 120), "units"))
-        title = ttk.Label(content, wraplength=650, justify="left", font=("Segoe UI", 13, "bold"))
-        title.pack(anchor="w", pady=(0, 15))
-        choices = ttk.Frame(content)
-        choices.pack(fill="x")
-        note = (
-            "Práctica: claves originales sin verificar; no otorga desbloqueos."
-            if source.startswith("fieldnotes-practice")
-            else "Apruebas con 4 de 5. Puedes salir sin penalización."
-        )
-        tip = ttk.Label(content, text=note)
-        tip.pack(anchor="w", pady=20)
+    def _present_quiz(self, topic: str, questions: list, source: str, *, insistent: bool = False) -> None:
+        def done(answers: list[int]) -> None:
+            self._finish_quiz(topic, questions, answers, source)
 
-        def exit_quiz() -> None:
-            self.in_quiz = False
-            window.destroy()
+        def postponed() -> None:
+            self.quiz, self.in_quiz = None, False
             self.status.set("Examen pendiente: podrás reanudarlo cuando quieras")
 
-        def render() -> None:
-            q = questions[current]
-            title.configure(text=f"{current + 1}/5  {q.prompt}")
-            selected.set(-1)
-            for child in choices.winfo_children():
-                child.destroy()
-            for i, opt in enumerate(q.options):
-                tk.Radiobutton(
-                    choices, text=opt, value=i, variable=selected, anchor="w", justify="left", wraplength=640
-                ).pack(anchor="w", pady=8)
-            canvas.yview_moveto(0)
-            finish.configure(text="Corregir examen" if current == 4 else "Siguiente")
+        self.quiz = QuizWindow(
+            self.root,
+            questions=questions,
+            source=source,
+            insistent=insistent,
+            on_done=done,
+            on_leave=postponed,
+        )
+        self.status.set("Examen abierto: responde las 5 preguntas" if insistent else "Examen abierto")
 
-        def next_question() -> None:
-            nonlocal current
-            if selected.get() not in range(4):
-                messagebox.showinfo(
-                    "Respuesta pendiente", "Selecciona una respuesta para continuar", parent=window
-                )
-                return
-            answers.append(selected.get())
-            if current < 4:
-                current += 1
-                render()
-                return
-            score, passed = self.store.record(
-                topic=topic, questions=questions, answers=answers, source=source
-            )
-            self.clock.reset_after_quiz()
-            self.pending = False
-            self.in_quiz = False
-            self._persist()
-            self._refresh_stats()
-            window.destroy()
-            unverified = source not in {
-                "fieldnotes-reviewed",
-                "fieldnotes+fallback-reviewed",
-                "fallback-reviewed",
-            }
-            state = "Práctica (sin verificación)" if unverified else ("Aprobado" if passed else "Repasar")
-            self.status.set(f"Resultado: {score}/5 · {state} · {source}")
-            show_exam_result(
-                self.root,
-                topic=topic,
-                questions=questions,
-                answers=answers,
-                score=score,
-                passed=passed,
-                source=source,
-            )
-
-        finish = ttk.Button(content, command=next_question)
-        finish.pack(anchor="e", pady=8)
-        ttk.Button(content, text="Posponer / salir", command=exit_quiz).pack(anchor="e")
-        window.protocol("WM_DELETE_WINDOW", exit_quiz)
-        render()
+    def _finish_quiz(self, topic: str, questions: list, answers: list[int], source: str) -> None:
+        score, passed = self.store.record(topic=topic, questions=questions, answers=answers, source=source)
+        self.clock.reset_after_quiz()
+        self.quiz, self.pending, self.in_quiz = None, False, False
+        self._persist()
+        self._refresh_stats()
+        unverified = source not in CERTIFIED_QUESTION_SOURCES
+        state = "Práctica (sin verificación)" if unverified else ("Aprobado" if passed else "Repasar")
+        self.status.set(f"Resultado: {score}/5 · {state} · {source}")
+        show_exam_result(
+            self.root,
+            topic=topic,
+            questions=questions,
+            answers=answers,
+            score=score,
+            passed=passed,
+            source=source,
+        )
 
     def _exit(self) -> None:
         if self.in_quiz:

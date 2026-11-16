@@ -6,6 +6,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Added
 
+- Insistent quiz window, on by default: a due quiz opens by itself, centered and on top, with no exit button. It comes back 5 seconds after a close or minimize, waits while a full-screen app or presentation mode is on, and ignores input for 2 seconds each time it appears. A failed load retries in 5 minutes. A checkbox in Ajustes turns it off.
 - All-day mode in Ajustes: the session starts at sign-in, lasts until midnight and renews itself the next day. Turning it on also turns on autostart.
 - Ajustes, section "Qué te pregunto": question set, source, exam domains, minutes between quizzes, the bank folder with a picker and the Ollama model. Settings are saved in SQLite, so the installed app finds the bank.
 - The clock stops while the computer is suspended or the session is locked, and the panel shows today's active time and why the clock is paused.

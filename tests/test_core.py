@@ -1,7 +1,7 @@
 import random
 import tempfile
 import unittest
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from guardian.core import (
@@ -12,6 +12,7 @@ from guardian.core import (
     within_study_window,
 )
 from guardian.questions import FALLBACK_GCP, get_questions
+from guardian.spaced import key
 
 
 class GuardianTests(unittest.TestCase):
@@ -75,6 +76,42 @@ class GuardianTests(unittest.TestCase):
             db = ResultStore(p)
             self.assertEqual(db.stats(), (1, 1))
             self.assertIn(FALLBACK_GCP[0].prompt.casefold(), db.recent_prompts())
+            db.close()
+
+    def test_record_with_injected_now_updates_cards(self):
+        now = datetime(2026, 11, 16, 9, 0, tzinfo=UTC)
+        questions = FALLBACK_GCP[:5]
+        wrong = [(q.answer_index + 1) % 4 for q in questions]
+        right = [q.answer_index for q in questions]
+        with tempfile.TemporaryDirectory() as d:
+            db = ResultStore(Path(d) / "cards.sqlite")
+            db.record(topic="gcp", questions=questions, answers=wrong, source="fallback-reviewed", now=now)
+            cards = db.cards()
+            self.assertEqual([cards[key(q.prompt)].box for q in questions], [0] * 5)
+            self.assertEqual(
+                [cards[key(q.prompt)].due_at for q in questions], [now + timedelta(minutes=10)] * 5
+            )
+            db.record(topic="gcp", questions=questions, answers=right, source="fallback-reviewed", now=now)
+            cards = db.cards()
+            self.assertEqual([cards[key(q.prompt)].box for q in questions], [1] * 5)
+            self.assertEqual([cards[key(q.prompt)].due_at for q in questions], [now + timedelta(hours=1)] * 5)
+            db.record(topic="gcp", questions=questions, answers=right, source="fallback-reviewed", now=now)
+            cards = db.cards()
+            self.assertEqual([cards[key(q.prompt)].box for q in questions], [2] * 5)
+            self.assertEqual([cards[key(q.prompt)].due_at for q in questions], [now + timedelta(hours=4)] * 5)
+            self.assertEqual(
+                db.con.execute("SELECT seen, wrong FROM guardian_cards").fetchall(), [(3, 1)] * 5
+            )
+            self.assertEqual(db.recent_attempts(1)[0][0], now.isoformat(timespec="seconds"))
+            db.close()
+
+    def test_cards_skip_dates_without_time_zone(self):
+        with tempfile.TemporaryDirectory() as d:
+            db = ResultStore(Path(d) / "cards.sqlite")
+            db.con.execute("INSERT INTO guardian_cards VALUES ('a?', 0, '2026-11-16T09:00:00', 1, 1)")
+            db.con.execute("INSERT INTO guardian_cards VALUES ('b?', 1, 'not a date', 1, 0)")
+            with self.assertLogs("guardian.core", level="WARNING"):
+                self.assertEqual(db.cards(), {})
             db.close()
 
 

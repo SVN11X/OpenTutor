@@ -7,12 +7,15 @@ explicitly reviewed and gradable in the source are candidates for scoring.
 from __future__ import annotations
 
 import json
+import logging
 import os
+from collections.abc import Sequence
 from functools import lru_cache
 from pathlib import Path
-from random import SystemRandom
 
 from .core import Question
+
+log = logging.getLogger(__name__)
 
 BANK_ENV = "GUARDIAN_GCP_BANK"
 BANK_DIR = "GCP_Data_Engineer_Fieldnotes"
@@ -42,8 +45,10 @@ def find_bank_path(explicit: Path | str | None = None) -> Path | None:
 
 
 @lru_cache(maxsize=4)
-def _load_questions(path: str, mtime_ns: int, size: int, reviewed_only: bool) -> tuple[Question, ...]:
-    """Cache by file metadata; skip incomplete/unreviewed/image questions."""
+def _load_questions(
+    path: str, mtime_ns: int, size: int, reviewed_only: bool, domains: tuple[int, ...] = ()
+) -> tuple[Question, ...]:
+    """Cache by file metadata; skip incomplete/unreviewed/image questions and other domains."""
     with open(path, encoding="utf-8") as handle:
         payload = json.load(handle)
     if not isinstance(payload, dict) or not isinstance(payload.get("questions"), list):
@@ -53,6 +58,10 @@ def _load_questions(path: str, mtime_ns: int, size: int, reviewed_only: bool) ->
     for item in payload["questions"]:
         if not isinstance(item, dict):
             continue
+        if domains:
+            domain = item.get("domain")
+            if not isinstance(domain, int) or domain not in domains:
+                continue
         if reviewed_only and (item.get("status") != "reviewed" or item.get("gradable") is not True):
             continue
         if item.get("hasImages") or item.get("missingDiagram") or item.get("required") != 1:
@@ -85,15 +94,45 @@ def _load_questions(path: str, mtime_ns: int, size: int, reviewed_only: bool) ->
     return tuple(result)
 
 
-def reviewed_questions(
-    recent: set[str], *, bank_path: Path | str | None = None, limit: int = 5, reviewed_only: bool = True
+def load_pool(
+    bank_path: Path | str | None = None, *, reviewed_only: bool = True, domains: Sequence[int] = ()
 ) -> list[Question]:
-    """Fast local selection. Does not invoke the network or write to Fieldnotes."""
+    """Every usable question of the bank. Read-only, never writes to Fieldnotes."""
     path = find_bank_path(bank_path)
     if path is None:
         return []
     info = path.stat()
-    questions = _load_questions(str(path), info.st_mtime_ns, info.st_size, reviewed_only)
-    used = {s.strip().casefold() for s in recent}
-    candidates = [q for q in questions if q.prompt.strip().casefold() not in used]
-    return SystemRandom().sample(candidates, min(limit, len(candidates)))
+    questions = _load_questions(str(path), info.st_mtime_ns, info.st_size, reviewed_only, tuple(domains))
+    return list(questions)
+
+
+def _is_domain_entry(entry: object) -> bool:
+    return (
+        isinstance(entry, dict)
+        and isinstance(entry.get("id"), int)
+        and isinstance(entry.get("name"), str)
+        and isinstance(entry.get("weight"), int)
+    )
+
+
+def domain_names(bank_path: Path | str | None = None) -> list[tuple[int, str, int]]:
+    """Domain catalog (id, name, weight) sorted by id; [] without a bank or catalog file."""
+    path = find_bank_path(bank_path)
+    if path is None:
+        return []
+    domains_file = path.parent / "domains.json"
+    if not domains_file.is_file():
+        return []
+    try:
+        with open(domains_file, encoding="utf-8") as handle:
+            payload = json.load(handle)
+        result = [
+            (entry["id"], entry["name"], entry["weight"]) for entry in payload if _is_domain_entry(entry)
+        ]
+    except (OSError, TypeError, ValueError) as err:
+        log.warning("Invalid domains file %s (%s)", domains_file, type(err).__name__)
+        return []
+    if len(result) != len(payload):
+        log.warning("Domains file %s has entries with an invalid id, name or weight", domains_file)
+        return []
+    return sorted(result)

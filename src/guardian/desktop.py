@@ -38,15 +38,21 @@ from .settings_store import Settings, SettingsStore
 from .settings_ui import SET_TOPICS, QuestionSettingsPanel, bank_summary, quiz_mode
 from .single_instance import SingleInstance
 from .task_store import TaskStore
+from .today_view import AgentState, active_today, counter_line, headline, setup_steps
 from .tray import TrayIcon
 
 
 class GuardianUI:
     def __init__(self, root: tk.Tk, *, demo: bool = False) -> None:
         self.root = root
-        self.root.title("OpenTutor Guardian — v0.2")
-        self.root.geometry("600x700")
-        self.root.minsize(560, 640)
+        self.root.title("OpenTutor Guardian")
+        # Fit small laptop screens at 125 or 150 %, centered so the taskbar never hides the exits.
+        screen_w, screen_h = self.root.winfo_screenwidth(), self.root.winfo_screenheight()
+        height = min(700, screen_h - 120)
+        self.root.geometry(
+            f"600x{height}+{max(0, (screen_w - 600) // 2)}+{max(0, (screen_h - height) // 2 - 30)}"
+        )
+        self.root.minsize(560, min(600, height))
         app_data = _app_data()
         self.store = ResultStore(app_data / "guardian_mvp.sqlite3")
         self.demo = demo
@@ -77,9 +83,13 @@ class GuardianUI:
         self.saved_today = self.activity.seconds_on(self.activity_day)
         # The user explicitly activates a bounded study session; no surprise outside it.
         self.until: datetime | None = None
-        self.status = tk.StringVar(value="Desactivado · sin bloqueos")
+        self.status = tk.StringVar(value="")
+        self.headline_text = tk.StringVar(value="")
+        self.counter_text = tk.StringVar(value="")
+        self.today_text = tk.StringVar(value="")
+        self.bank_found = bank_summary(self.settings.bank_path)[0]
+        self.guide_shown: tuple | None = None
         self.stats = tk.StringVar(value="")
-        self.next_review = tk.StringVar(value="")
         self.last_result = tk.StringVar(value="")
         self.pending_text = tk.StringVar(value="")
         self.recent_text = tk.StringVar(value="")
@@ -96,8 +106,7 @@ class GuardianUI:
         self._restore_session()
         if self.settings.all_day and not self.enabled:
             self._start()  # all-day mode: the owner chose to study from sign-in, decision 0007
-        found, _text = bank_summary(self.settings.bank_path)
-        if not found and self.settings.source != "ollama":
+        if not self.bank_found and self.settings.source != "ollama":
             self.status.set("No encuentro el banco de preguntas: elige su carpeta en Ajustes")
         self.commands: queue.Queue[str] = queue.Queue()
         self.tray = TrayIcon(self.commands.put)
@@ -133,30 +142,41 @@ class GuardianUI:
             self.tabs.add(page, text=name)
         self.tabs.enable_traversal()  # Ctrl+Tab and Ctrl+PgUp/PgDn
 
-        # Hoy: state, next review, session controls, integration health, emergency
+        # Hoy: what Guardian is doing, the controls, first steps, then the always-visible exits
+        now_box = ttk.LabelFrame(today, text="Ahora", padding=10)
+        now_box.pack(fill="x")
         ttk.Label(
-            today,
-            textvariable=self.status,
-            foreground="#1a4f8a",
-            wraplength=500,
-            font=("Segoe UI", 10, "bold"),
+            now_box, textvariable=self.headline_text, foreground="#1a4f8a", font=("Segoe UI", 12, "bold")
         ).pack(anchor="w")
-        ttk.Label(today, textvariable=self.next_review).pack(anchor="w", pady=(6, 0))
-        ttk.Label(today, textvariable=self.last_result).pack(anchor="w", pady=(2, 8))
-        controls = ttk.Frame(today)
-        controls.pack(anchor="w", pady=(0, 8))
+        ttk.Label(now_box, textvariable=self.counter_text).pack(anchor="w", pady=(6, 0))
+        ttk.Label(now_box, textvariable=self.today_text).pack(anchor="w", pady=(2, 8))
+        controls = ttk.Frame(now_box)
+        controls.pack(anchor="w")
         ttk.Button(controls, textvariable=self.start_label, command=self._start).pack(
             side="left", padx=(0, 7)
         )
         ttk.Button(controls, text="Pausar 15 min", command=self._pause).pack(side="left", padx=(0, 7))
-        ttk.Button(controls, text="Terminar", command=self._stop).pack(side="left")
-        ttk.Button(today, text="Hacer examen ahora", command=self._open_quiz).pack(anchor="w", pady=(0, 10))
-        ttk.Label(today, text="Servicios", font=("Segoe UI", 10, "bold")).pack(anchor="w")
-        ttk.Label(today, textvariable=self.health, wraplength=500, justify="left").pack(anchor="w")
-        ttk.Label(today, text="Restricciones: ninguna. El bloqueo de ocio aún no existe.").pack(
-            anchor="w", pady=(6, 10)
+        ttk.Button(controls, text="Terminar", command=self._stop).pack(side="left", padx=(0, 7))
+        ttk.Button(controls, text="Hacer examen ahora", command=self._open_quiz).pack(side="left")
+        ttk.Label(today, textvariable=self.last_result).pack(anchor="w", pady=(10, 0))
+        ttk.Label(today, textvariable=self.status, foreground="#555555", wraplength=520, justify="left").pack(
+            anchor="w", pady=(4, 10)
         )
-        row = ttk.Frame(today)
+        self.guide_box = ttk.LabelFrame(today, text="Primeros pasos", padding=10)
+        self.guide_rows = ttk.Frame(self.guide_box)
+        self.guide_rows.pack(fill="x")
+        guide_actions = ttk.Frame(self.guide_box)
+        guide_actions.pack(anchor="e", pady=(6, 0))
+        ttk.Button(guide_actions, text="Ir a Ajustes", command=lambda: self.tabs.select(5)).pack(
+            side="left", padx=(0, 7)
+        )
+        ttk.Button(guide_actions, text="Ocultar guía", command=self._hide_guide).pack(side="left")
+        bottom = ttk.Frame(today)
+        bottom.pack(side="bottom", fill="x")
+        ttk.Label(
+            bottom, textvariable=self.health, foreground="#555555", wraplength=520, justify="left"
+        ).pack(anchor="w", pady=(0, 6))
+        row = ttk.Frame(bottom)
         row.pack(anchor="w")
         ttk.Button(row, text="Emergencia", command=self._emergency).pack(side="left", padx=(0, 7))
         ttk.Button(row, text="Ocultar a bandeja", command=self._hide).pack(side="left", padx=(0, 7))
@@ -212,8 +232,8 @@ class GuardianUI:
             command=self._toggle_insistent,
         ).pack(anchor="w", pady=(4, 0))
 
-    def _refresh_views(self) -> None:
-        """Recompute the read-only panels from SQLite and the clock. Cheap, UI thread."""
+    def _refresh_stats(self) -> None:
+        """Read results from SQLite. Only at start and after a quiz, never every second."""
         total, passed = self.store.stats()
         self.stats.set(f"Exámenes realizados: {total}   |   Aprobados certificados: {passed}")
         avg = self.store.average_score()
@@ -231,20 +251,50 @@ class GuardianUI:
             if recent
             else "Último resultado: ninguno"
         )
+
+    def _refresh_views(self) -> None:
+        """Recompute the live texts from memory. Runs every second, so it never touches SQLite."""
+        now = _now()
+        state = AgentState(
+            enabled=self.enabled and self.until is not None,
+            all_day=self.settings.all_day,
+            until=self.until,
+            paused_until=self.pause_until if self.pause_until > now else None,
+            pending=self.pending,
+            in_quiz=self.in_quiz,
+        )
+        self.headline_text.set(headline(state, now))
+        self.counter_text.set(
+            counter_line(state.enabled, self.paused_reason, self.clock.eligible, self.clock.target)
+        )
+        self.today_text.set(active_today(self.saved_today + self.unsaved_seconds))
         self.pending_text.set(
             "● Examen pendiente: pulsa 'Hacer examen ahora'" if self.pending else "○ Sin examen pendiente"
         )
-        today = int(self.saved_today + self.unsaved_seconds)
-        studied = f"Tiempo activo hoy: {today // 3600} h {today % 3600 // 60} min"
-        if self.enabled and self.until is not None and self.paused_reason:
-            self.next_review.set(f"Contador en pausa: {self.paused_reason} · {studied}")
-        elif self.enabled and self.until is not None:
-            left = max(0, int(self.clock.target - self.clock.eligible))
-            self.next_review.set(
-                f"Siguiente repaso: en unos {max(1, left // 60)} min de actividad (aleatorio) · {studied}"
-            )
-        else:
-            self.next_review.set(f"Siguiente repaso: sin sesión activa · {studied}")
+        self._refresh_guide()
+
+    def _refresh_guide(self) -> None:
+        steps = setup_steps(
+            bank_found=self.bank_found, all_day=self.settings.all_day, autostart=self.autostart_var.get()
+        )
+        shown = None if self.settings.guide_done or all(done for done, _ in steps) else tuple(steps)
+        if shown == self.guide_shown:
+            return
+        self.guide_shown = shown
+        if shown is None:
+            self.guide_box.pack_forget()
+            return
+        for child in self.guide_rows.winfo_children():
+            child.destroy()
+        for done, text in shown:
+            ttk.Label(self.guide_rows, text=("✔ " if done else "✖ ") + text).pack(anchor="w")
+        self.guide_box.pack(fill="x", pady=(0, 10))
+
+    def _hide_guide(self) -> None:
+        try:
+            self.settings = self.settings_store.save(replace(self.settings_store.load(), guide_done=True))
+        except (ValueError, OSError) as err:
+            self.status.set(f"No se pudo guardar: {err}")
 
     # ---- session lifecycle (explicit, persisted so a restart keeps the user's choice) ----
     def _persist(self) -> None:
@@ -270,7 +320,7 @@ class GuardianUI:
         if saved.active:
             self.enabled, self.until = True, saved.until
             self.pause_until = saved.paused_until or _EPOCH
-            self.status.set(f"Sesión restaurada · hasta {saved.until:%H:%M} · pulsa Detener para terminar")
+            self.status.set("Sesión restaurada después de reiniciar")
         if self.pending:
             self.status.set("Examen pendiente de antes del reinicio · pulsa 'Hacer examen ahora'")
             if self.enabled and not self.settings.insistent:
@@ -339,6 +389,7 @@ class GuardianUI:
             self.settings.interval_max,
         )
         self.settings = settings
+        self.bank_found = bank_summary(settings.bank_path)[0]
         if changed:
             self.clock = SurpriseClock(interval=self._interval())
         self._persist()
@@ -441,9 +492,6 @@ class GuardianUI:
         except tk.TclError:
             return  # window already destroyed
         self.root.after(200, self._poll_commands)
-
-    def _refresh_stats(self) -> None:
-        self._refresh_views()
 
     def _tick(self) -> None:
         now_mono = time.monotonic()

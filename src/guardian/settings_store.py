@@ -37,6 +37,7 @@ class Settings:
     all_day: bool = False
     insistent: bool = True
     model: str = "qwen3.5:4b"
+    guide_done: bool = False  # the owner hid the first-steps card
 
 
 DEFAULTS = Settings()
@@ -57,7 +58,7 @@ def validate(settings: Settings) -> Settings:
         raise ValueError(f"Los minutos deben ir de {low} a {high}, y el mínimo no puede superar al máximo")
     if not isinstance(settings.bank_path, str) or not isinstance(settings.model, str):
         raise ValueError("Texto inválido en los ajustes")
-    if not isinstance(settings.all_day, bool) or not isinstance(settings.insistent, bool):
+    if not all(isinstance(v, bool) for v in (settings.all_day, settings.insistent, settings.guide_done)):
         raise ValueError("Valor inválido en los ajustes")
     return replace(settings, domains=tuple(sorted(set(settings.domains))))
 

@@ -14,6 +14,8 @@ VALUE_NAME = "OpenTutorGuardian"
 
 def build_command(repo_root: Path, python_exe: str | None = None) -> str:
     """Command line that starts Guardian hidden in the tray, from any working directory."""
+    if getattr(sys, "frozen", False):
+        return f'"{sys.executable}" --hidden'
     exe = Path(python_exe or sys.executable)
     windowless = exe.with_name("pythonw.exe")
     if windowless.exists():

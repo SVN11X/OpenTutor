@@ -33,7 +33,7 @@ desktop agent. The web app and API were removed on purpose: everything here runs
 
 ## What does not exist yet
 
-No app or website blocking and no installer, so you run it from source. No link with FocoLocal, the author's
+No app or website blocking. There is no signed installer yet, so the supported way is to run it from source or build the installer yourself (see Build an installer). No link with FocoLocal, the author's
 separate site limiter, so a validated task gives no leisure credit, meaning no permission for free time. PDF text cannot be read reliably, so a PDF with required terms goes to review.
 See `docs/` for the usage guide, design notes and audits.
 
@@ -51,6 +51,17 @@ See `docs/` for the usage guide, design notes and audits.
 Requires Python 3.11 or newer with tkinter. The app has no third-party packages. No network except the
 optional local Ollama at `127.0.0.1:11434`. No telemetry.
 
+## Build an installer
+
+From the repository root, in Windows PowerShell with Python 3.11 and Inno Setup 6 installed:
+
+```
+.\scriptsuild-installer.ps1
+```
+
+The installer lands in `dist\installer\`. It installs for the current user only and has a normal uninstaller.
+It is not signed yet, so Windows shows "Unknown publisher". See `docs/decisions/0006-windows-installer-and-code-signing.md`.
+
 ## Standard
 
 This repository follows SVN11X/standards@v1. Install the development tools, then run the check from the
@@ -65,6 +76,8 @@ python -m unittest discover -s tests
 Goals and non-goals are in `docs/goals.md`.
 
 ## Privacy and safety
+
+Full policy: `docs/privacy.md`.
 
 Data stays in `%LOCALAPPDATA%\OpenTutorGuardian` (one SQLite file with results, session, tasks and evidence). Guardian does
 not watch keys, screen, audio or window titles. The emergency button and Exit are always visible.
